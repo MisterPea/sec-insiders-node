@@ -1,5 +1,5 @@
 import { apiRequest } from "./httpRequest.js";
-import { SecEntity } from "./types.js";
+import { AccessionBase, SecEntity } from "./types.js";
 
 // Initial call to get company data
 export async function getCikData(ciks: string[]): Promise<SecEntity[]> {
@@ -17,7 +17,7 @@ export async function getCikData(ciks: string[]): Promise<SecEntity[]> {
 }
 
 // Build paths for Form 4 and 4A from accession numbers 
-export function buildAccessionBase(jsonData: SecEntity): string[] {
+export function buildAccessionBase(jsonData: SecEntity): AccessionBase[] {
   const { cik, filings } = jsonData;
   const { recent } = filings;
   const { form, accessionNumber, primaryDocument } = recent;
@@ -29,23 +29,31 @@ export function buildAccessionBase(jsonData: SecEntity): string[] {
     if (currForm === '4' || currForm === '4/A') {
       const cikNum = Number(cik);
       const accNum = accessionNumber[i].replace(/-/g, '');
-      const base = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNum}/${primaryDocument[i]}`;
+      const doc = primaryDocument[i].replace(/(xsl.*)(?:\/)/g,'');
+      const url = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNum}/${doc}`;
+
+      const base = {
+        cik,
+        accession: accessionNumber[i],
+        url,
+      };
       formFourPaths.push(base);
     }
   }
   return formFourPaths;
 }
 
-export function getFormFourXML(urls: string[]) {
-  return Promise.all(
-    urls.map((url) => apiRequest({
-      url,
-      method: "GET",
-      headers: {
-        "User-Agent": "Unartful Labs (sysop@misterpea.me)",
-        "Accept": "application/xml"
-      }
-    }, { priority: 1 }
-    ))
-  );
+// Get XML data
+export async function getXmlData(url: string):Promise<any> {
+  return apiRequest({
+    url: url,
+    method: "GET",
+    headers: {
+      "User-Agent": "Unartful Labs (sysop@misterpea.me)",
+      "Accept": "application/xml",
+    },
+    responseType:"text",
+    transformResponse: [data => data]
+  }, { priority: 10 }
+  ) as Promise<any>;
 }

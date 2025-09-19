@@ -70,3 +70,9 @@ export interface FilingFile {
   filingFrom: string;
   filingTo: string;
 }
+
+export type AccessionBase = {
+  cik: string,
+  accession: string,
+  url: string
+};
