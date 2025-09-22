@@ -17,7 +17,7 @@ export async function getCikData(ciks: string[]): Promise<SecEntity[]> {
 }
 
 // Build paths for Form 4 and 4A from accession numbers 
-export function buildAccessionBase(jsonData: SecEntity): AccessionBase[] {
+export function buildAccessionBase(jsonData: SecEntity): string[][] {
   const { cik, filings } = jsonData;
   const { recent } = filings;
   const { form, accessionNumber, primaryDocument } = recent;
@@ -29,14 +29,14 @@ export function buildAccessionBase(jsonData: SecEntity): AccessionBase[] {
     if (currForm === '4' || currForm === '4/A') {
       const cikNum = Number(cik);
       const accNum = accessionNumber[i].replace(/-/g, '');
-      const doc = primaryDocument[i].replace(/(xsl.*)(?:\/)/g,'');
+      const doc = primaryDocument[i].replace(/(xsl.*)(?:\/)/g, '');
       const url = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNum}/${doc}`;
 
-      const base = {
+      const base = [
         cik,
-        accession: accessionNumber[i],
+        accessionNumber[i],
         url,
-      };
+      ];
       formFourPaths.push(base);
     }
   }
@@ -44,7 +44,7 @@ export function buildAccessionBase(jsonData: SecEntity): AccessionBase[] {
 }
 
 // Get XML data
-export async function getXmlData(url: string):Promise<any> {
+export async function getXmlData(url: string): Promise<any> {
   return apiRequest({
     url: url,
     method: "GET",
@@ -52,7 +52,7 @@ export async function getXmlData(url: string):Promise<any> {
       "User-Agent": "Unartful Labs (sysop@misterpea.me)",
       "Accept": "application/xml",
     },
-    responseType:"text",
+    responseType: "text",
     transformResponse: [data => data]
   }, { priority: 10 }
   ) as Promise<any>;

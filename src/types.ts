@@ -74,5 +74,54 @@ export interface FilingFile {
 export type AccessionBase = {
   cik: string,
   accession: string,
-  url: string
+  url: string;
+};
+
+export type DerivativeTransaction = {
+  securityTitle: string;
+  conversionOrExercisePrice?: number | null;
+  transactionDate: string;
+  transactionFormType?: number | string;
+  transactionCode: string; // 'M', etc.
+  equitySwapInvolved?: number | string;
+  transactionTimeliness?: string; // often '' or 'I'
+  transactionShares: number;
+  transactionPricePerShare?: number;
+  transactionAcquiredDisposedCode?: 'A' | 'D';
+  exerciseDate?: string | null;
+  expirationDate?: string | null;
+  underlyingSecurityTitle?: string | null;
+  underlyingSecurityShares?: number | null;
+  sharesOwnedFollowingTransaction?: number | null;
+  directOrIndirectOwnership?: 'D' | 'I' | null;
+};
+
+export type nonDerivativeTransaction = {
+  securityTitle: string;
+  transactionDate: string;
+  transactionFormType?: number | string;
+  transactionCode: string; // 'S', 'A', etc.
+  equitySwapInvolved?: number | string;
+  transactionTimeliness?: string;
+  transactionShares: number;
+  transactionPricePerShare?: number; // not stored in schema
+  transactionAcquiredDisposedCode?: 'A' | 'D';
+  sharesOwnedFollowingTransaction?: number | null;
+  directOrIndirectOwnership?: 'D' | 'I' | null;
+};
+
+export type Form4Parsed = {
+  accession: string;
+  issuerCik: number | string;
+  rptOwnerName: string;
+  periodOfReport: string;           // 'YYYY-MM-DD'
+  documentType: string | number;    // '4' or '4/A' (sometimes number 4)
+  aff10b5One?: number | boolean;    // 0/1
+  isOfficer?: number | boolean;
+  isDirector?: number | boolean;
+  isOther?: number | boolean;
+  officerTitle?: string | null;
+  isTenPercentOwner?: number | boolean;
+  derivativeTransaction?: DerivativeTransaction[];
+  nonDerivativeTransaction?: nonDerivativeTransaction[];
 };
