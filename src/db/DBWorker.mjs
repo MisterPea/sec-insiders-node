@@ -25,6 +25,10 @@ parentPort.on( 'message', async ( message ) => {
     let result;
     if ( type === 'get' ) {
       result = stmt.get( ...params );
+    }
+    else if ( type === 'set' ) {
+      stmt.bind( ...params ).run();
+      result = { set: params.length };
     } else if ( type === 'insert' ) {
       const insertMany = db.transaction( ( rows ) => {
         for ( const paramSet of rows ) {

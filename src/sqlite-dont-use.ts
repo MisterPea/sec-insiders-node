@@ -105,8 +105,8 @@ export class DB {
 
     if (!firstRecord) return null;
 
-    const updateStatement = this.db.prepare(`UPDATE form4_jobs SET status='running' WHERE accession = ?`);
-    updateStatement.bind((firstRecord as AccessionBase).accession).run();
+    // const updateStatement = this.db.prepare(`UPDATE form4_jobs SET status='running' WHERE accession = ?`);
+    // updateStatement.bind((firstRecord as AccessionBase).accession).run();
 
     return firstRecord as AccessionBase;
   }
