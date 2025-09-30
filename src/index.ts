@@ -1,10 +1,9 @@
 import { buildAccessionBase, getCikData, getXmlData } from "./pipeline.js";
 import sp500_cik from "./sp500_CIK.js";
-// import { DB } from "./sqlite-dont-use.js";
-import { AccessionBase, Form4Parsed, SecEntity } from "./types.js";
+import { Form4Parsed, SecEntity } from "./types.js";
 import { XMLParser } from 'fast-xml-parser';
 import { DB } from "./db/DB.js";
-import formFourProcessor from "./processing/formFourProcesser.js";
+import formFourProcessor from "./processing/formFourProcessor.js";
 
 const db = new DB();
 
@@ -34,60 +33,153 @@ async function getInitialData(currBatch: string[]) {
     VALUES (?, ?, ?, ?, ?)`,
     issuers
   );
+  console.log(`${issuers.length} companies inserted into issuers table.`);
 
   await db.insertData(`
-    INSERT OR REPLACE INTO form4_jobs (cik, accession, url)
-    VALUES (?, ?, ?)`,
+    INSERT INTO form4_jobs (cik, accession, url)
+    VALUES (?, ?, ?)
+    ON CONFLICT(url) DO NOTHING`,
     accessionArray
   );
+  console.log(`${accessionArray.length} jobs inserted into form4_jobs table.`);
 }
 
+
+class XmlJobProcessor {
+  private isProcessing = false;
+  private maxConcurrent = 3;
+  private activeJobs = 0;
+
+  async startProcessing() {
+    if (this.isProcessing) {
+      console.log('Processing already in progress');
+      return;
+    }
+
+    this.isProcessing = true;
+    console.log('Starting XML job processing...');
+
+    // Process multiple jobs concurrently
+    const workers = Array(this.maxConcurrent).fill(null).map(() => this.worker());
+    await Promise.all(workers);
+
+    this.isProcessing = false;
+    console.log('XML job processing completed');
+  }
+
+  private async worker() {
+    while (this.isProcessing) {
+      if (this.activeJobs >= this.maxConcurrent) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+
+      this.activeJobs++;
+
+      try {
+        const hasMoreJobs = await processNextXmlUrl();
+        if (!hasMoreJobs) {
+          this.isProcessing = false; // Signal other workers to stop
+        }
+      } catch (error) {
+        console.error('Worker error:', error);
+      } finally {
+        this.activeJobs--;
+      }
+
+      // Small delay between jobs
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+}
+
+
 /**
- * Finds first pending job from form4_jobs table and processes it.
+ * @param {Object} documentData takes in an object of url, accession, and cik
  * @returns 
  */
 async function handleProcessingOfXmlUrls(documentData: { url: string, accession: string, cik: string; }) {
   const { url, accession, cik } = documentData;
-  const xmlData = await getXmlData(url);
-  const parser = new XMLParser({ ignoreDeclaration: true });
-  const { ownershipDocument } = parser.parse(xmlData);
-  const flatJson = { accession, ...flattenTree(ownershipDocument), issuerCik: cik };
 
-  const formData = formFourProcessor(flatJson as Form4Parsed);
+  try {
+    const xmlData = await getXmlData(url);
+    const parser = new XMLParser({ ignoreDeclaration: true });
+    const { ownershipDocument } = parser.parse(xmlData);
 
-  const { cols, rows } = formData;
+    const flatJson = { accession, ...flattenTree(ownershipDocument), issuerCik: cik };
+  
+    const formData = formFourProcessor(flatJson as Form4Parsed);
+    const { cols, rows } = formData;
+    
+    const dataReturn = await db.insertData(`
+      INSERT OR REPLACE INTO form4_filings (${cols.join(', ')})
+      VALUES (${new Array(cols.length).fill('?').join(', ')})`,
+      rows
+    );
 
-  const dataReturn = await db.insertData(`
-    INSERT OR REPLACE INTO form4_filings (${cols.join(', ')})
-    VALUES (${new Array(cols.length).fill('?').join(', ')})
-    `, rows);
-
-  if (dataReturn.inserted) {
-    return dataReturn.inserted;
-  } else {
-    throw new Error('Error inserting XML in form4_filings');
+    if (dataReturn.inserted && dataReturn.inserted > 0) {
+      return { success: true, inserted: dataReturn.inserted };
+    } else {
+      return { success: false, error: 'No rows inserted' };
+    }
+  } catch (error) {
+    console.error(`Error processing XML for accession ${accession}:`, error);
+    return {
+      success: false,
+      error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string; }).message : String(error)
+    };
   }
 }
 
-async function processNextXmlUrl() {
-  const documentData = await db.getData(`SELECT * FROM form4_jobs WHERE status='pending'`);
-  const { accession } = documentData;
+//
+async function processNextXmlUrl(): Promise<boolean> {
+  try {
+    // Atomic operation-we're updating as we're setting
+    const result = await db.getData(`
+      UPDATE form4_jobs
+      SET status='running'
+      WHERE accession = (
+        SELECT accession FROM form4_jobs
+        WHERE status='pending' OR status='failed'
+        LIMIT 1
+      )
+      RETURNING *
+    `);
 
-  await db.setData(`UPDATE form4_jobs SET status='running' WHERE accession = ?`, [accession]);
+    if (!result) {
+      console.log('No pending jobs found');
+      return false;
+    }
 
-  if (!documentData) return;
-  const rtn = await handleProcessingOfXmlUrls(documentData);
-  if (rtn > 0) {
-    await db.setData(`UPDATE form4_jobs SET status='ingested' WHERE accession = ?`, [accession]);
-    processNextXmlUrl()
+    const { accession } = result;
+    console.log(`Processing job: ${accession}`);
+    const processingResult = await handleProcessingOfXmlUrls(result);
+
+    if (processingResult.success) {
+      await db.setData(`UPDATE form4_jobs SET status='ingested' WHERE accession = ?`, [accession]);
+      console.log(`Successfully processed job: ${accession}`);
+      return true; // Successfully processed
+    } else {
+      // Mark as failed for later retry or manual inspection
+      await db.setData(`
+        UPDATE form4_jobs 
+        SET status='failed', error_message=?, updated_at=CURRENT_TIMESTAMP 
+        WHERE accession = ?`,
+        [JSON.stringify(processingResult.error), accession]
+      );
+      console.error(`Failed to process job: ${accession}, error: ${processingResult.error}`);
+      return true; // Continue processing other jobs despite this failure
+    }
+
+  } catch (error) {
+    console.error('Error in processNextXmlUrl:', error);
+    return false; // Stop processing on unexpected errors
   }
-  return;
 }
-
-processNextXmlUrl();
 
 // Flattens json tree and normalizes possible array values 
 function flattenTree(obj: any, prefix = ''): Record<string, any> {
+
   const result: Record<string, any> = {};
 
   for (var [key, value] of Object.entries(obj)) {
@@ -114,15 +206,13 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
       result[newKey] = value;
     }
   }
+
   return result;
 }
 
+await initBatchOrchestrator();
+console.log('Initial ingest complete');
+const processor = new XmlJobProcessor();
+processor.startProcessing()
 
-
-// processXmlUrls();
-
-// await initBatchOrchestrator()
-
-// await getInitialData();
-// processXmlUrls();
 

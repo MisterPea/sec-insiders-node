@@ -30,7 +30,7 @@ export class RateLimiter {
   private async refillLoop() {
     while (true) {
       await this.sleep(this.refillMs);
-      this.tokens = this.rps;
+      this.tokens = Math.min(this.tokens + 1, this.rps);
       this.drain();
     }
   }
