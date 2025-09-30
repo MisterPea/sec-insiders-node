@@ -29,6 +29,7 @@ export default function formFourProcessor(flatJson: Form4Parsed) {
 
   const isAmendment = (formType: string | number): 0 | 1 => String(formType).toUpperCase().includes('/A') ? 1 : 0;
   const toString = (v: any) => (v === undefined || v === null ? null : String(v));
+  const boolToInt = (v: any) => typeof v === 'number' ? v : (v === false ? 0 : 1); // return v if number else, convert to number
 
   // If values exist in flatJson and formData, assign them
   Object.keys(formData).forEach((key) => {
@@ -39,7 +40,7 @@ export default function formFourProcessor(flatJson: Form4Parsed) {
 
   const { accession, issuerCik, rptOwnerName, issuerTradingSymbol, periodOfReport, documentType, aff10b5One, isOfficer, isDirector, isOther, officerTitle, isTenPercentOwner, derivativeTransaction, nonDerivativeTransaction, footnotes } = formData;
   const colPrefix = ['accession', 'cik', 'owner_name', 'period_of_report', 'form_type', 'ten5_1', 'is_officer', 'is_director', 'is_other', 'officer_title', 'is_ten_percent'];
-  const rowPrefix = [accession, issuerCik, rptOwnerName, periodOfReport, toString(documentType), aff10b5One, isOfficer, isDirector, isOther, officerTitle, isTenPercentOwner];
+  const rowPrefix = [accession, issuerCik, rptOwnerName, periodOfReport, toString(documentType), boolToInt(aff10b5One), boolToInt(isOfficer), boolToInt(isDirector), boolToInt(isOther), officerTitle, boolToInt(isTenPercentOwner)];
 
   const exerciseIdSeed = `${accession}:${rptOwnerName.replaceAll(' ', '_')}:${issuerTradingSymbol}`;
 
@@ -177,21 +178,25 @@ function processDerivNonDeriv(derivatives: DerivativeTransaction[], nonDerivativ
       transactionCode,
       0,
       transactionCode === 'M' ? 1 : 0, // is from option exercise
-      (hasDerivativeExercise && transactionCode === 'S' && transactionAcquiredDisposedCode === 'D') ? 1 : 0, // is options related sale: need logic
+      (hasDerivativeExercise && ['F', 'D', 'S'].includes(transactionCode) && transactionAcquiredDisposedCode === 'D') ? 1 : 0, // is options related sale
       null,
       directOrIndirectOwnership,
       null,
       null,
       null,
       sharesOwnedFollowingTransaction,
-      (transactionCode === 'M' && transactionAcquiredDisposedCode === 'A') ? exerciseGroupId : null, // is in exercise group
+      (['A', 'M', 'I'].includes(transactionCode) && transactionAcquiredDisposedCode === 'A') ? exerciseGroupId : null, // is in exercise group
       null,
     ];
 
     accumulatedTransactionRows.push(transactionFieldValues);
   }
 
-  return { transactionColumns, accumulatedTransactionRows };
+  // Ensure no undefined values in accumulatedTransactionRows
+  const sanitizedRows = accumulatedTransactionRows.map(row =>
+    row.map(value => value === undefined ? null : value)
+  );
+  return { transactionColumns, accumulatedTransactionRows: sanitizedRows };
 }
 
 
