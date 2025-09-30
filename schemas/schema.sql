@@ -9,16 +9,16 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS form4_jobs (
-    accession TEXT PRIMARY KEY,
-    cik TEXT NOT NULL,
+    cik TEXT,
+    accession TEXT,
     url TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending', -- pending|running|done|failed
-    attempts INTEGER NOT NULL DEFAULT 0,
-    discovered_at TEXT NOT NULL DEFAULT (datetime ('now')),
-    processed_at TEXT,
-    last_modified TEXT,
-    xml_sha256 TEXT
+    status TEXT DEFAULT 'pending',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_form4_jobs_url ON form4_jobs (url);
 
 CREATE TABLE
   IF NOT EXISTS form4_filings (
