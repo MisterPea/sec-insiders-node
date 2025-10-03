@@ -107,10 +107,11 @@ async function handleProcessingOfXmlUrls(documentData: { url: string, accession:
     const { ownershipDocument } = parser.parse(xmlData);
 
     const flatJson = { accession, ...flattenTree(ownershipDocument), issuerCik: cik };
-  
+
     const formData = formFourProcessor(flatJson as Form4Parsed);
+
     const { cols, rows } = formData;
-    
+
     const dataReturn = await db.insertData(`
       INSERT OR REPLACE INTO form4_filings (${cols.join(', ')})
       VALUES (${new Array(cols.length).fill('?').join(', ')})`,
@@ -140,7 +141,7 @@ async function processNextXmlUrl(): Promise<boolean> {
       SET status='running'
       WHERE accession = (
         SELECT accession FROM form4_jobs
-        WHERE status='pending' OR status='failed'
+        WHERE status='pending'
         LIMIT 1
       )
       RETURNING *
@@ -160,6 +161,7 @@ async function processNextXmlUrl(): Promise<boolean> {
       console.log(`Successfully processed job: ${accession}`);
       return true; // Successfully processed
     } else {
+      
       // Mark as failed for later retry or manual inspection
       await db.setData(`
         UPDATE form4_jobs 
@@ -191,7 +193,7 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
     }
 
     // Normalize transactions and footnotes to be arrays
-    if (key === 'derivativeTransaction' || key === 'nonDerivativeTransaction' || key === 'footnotes') {
+    if (['derivativeTransaction', 'nonDerivativeTransaction', 'nonDerivativeHolding', 'derivativeHolding', 'footnotes'].includes(key)) {
       // if not array
       if (!Array.isArray(value)) {
         value = [value];
@@ -210,9 +212,22 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
   return result;
 }
 
-await initBatchOrchestrator();
-console.log('Initial ingest complete');
-const processor = new XmlJobProcessor();
-processor.startProcessing()
+async function runOrchestrator() {
+  await initBatchOrchestrator();
+  console.log('Initial ingest complete');
+  const processor = new XmlJobProcessor();
+  processor.startProcessing();
+}
+
+async function reset() {
+  const x = await db.setData(`
+    UPDATE form4_jobs
+  SET status = 'pending'
+  WHERE status = 'failed'`, []);
+  console.log(x);
+}
 
 
+
+// reset()
+runOrchestrator()

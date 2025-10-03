@@ -110,6 +110,26 @@ export type nonDerivativeTransaction = {
   directOrIndirectOwnership?: 'D' | 'I' | null;
 };
 
+export type nonDerivativeHolding = {
+  securityTitle: string;
+  footnoteId?: string;
+  sharesOwnedFollowingTransaction: number | null;
+  directOrIndirectOwnership: 'D' | 'I' | null;
+};
+
+export type DerivativeHolding = {
+  securityTitle: string;
+  conversionOrExercisePrice?: number | null;
+  exerciseDate?: string | null;
+  expirationDate?: string | null;
+  underlyingSecurityTitle?: string | null;
+  underlyingSecurityShares?: number | null;
+  sharesOwnedFollowingTransaction?: number | null;
+  directOrIndirectOwnership: 'D' | 'I' | null;
+  natureOfOwnership: string | null;
+  footnoteId?: string | null;
+};
+
 export type Form4Parsed = {
   accession: string;
   issuerCik: number | string;
