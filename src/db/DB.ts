@@ -36,6 +36,10 @@ export class DB {
     return this.sendToWorker('get', sql, params);
   }
 
+  async getAllData<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+    return this.sendToWorker('get_all', sql, params);
+  }
+
   async insertData(sql: string, paramSets: any[][]): Promise<{ inserted: number; }> {
     return this.sendToWorker('insert', sql, paramSets);
   }
@@ -44,7 +48,7 @@ export class DB {
     return this.sendToWorker('set', sql, params);
   }
 
-  private sendToWorker(type: 'get' | 'insert' | 'set', sql: string, params: any): Promise<any> {
+  private sendToWorker(type: 'get' | 'get_all' | 'insert' | 'set', sql: string, params: any): Promise<any> {
     const id = uuidv4();
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });

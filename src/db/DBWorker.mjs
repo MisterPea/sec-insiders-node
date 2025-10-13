@@ -26,6 +26,9 @@ parentPort.on( 'message', async ( message ) => {
     if ( type === 'get' ) {
       result = stmt.get( ...params );
     }
+    else if ( type === 'get_all' ) {
+      result = stmt.all(...params);
+    }
     else if ( type === 'set' ) {
       stmt.bind( ...params ).run();
       result = { set: params.length };
