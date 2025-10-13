@@ -1,3 +1,6 @@
 node_modules
 .DS_Store
 sqlite/sec_data.db
+sqlite/sec_data.db-shm
+sqlite/sec_data.db-wal
+sqlite/.help

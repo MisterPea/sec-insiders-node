@@ -4,6 +4,7 @@ import { Form4Parsed, SecEntity } from "./types.js";
 import { XMLParser } from 'fast-xml-parser';
 import { DB } from "./db/DB.js";
 import formFourProcessor from "./processing/formFourProcessor.js";
+import { findClusterEvent } from "./processing/findClusters.js";
 
 const db = new DB();
 
@@ -213,7 +214,7 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
 }
 
 async function runOrchestrator() {
-  await initBatchOrchestrator();
+  await initBatchOrchestrator(10);
   console.log('Initial ingest complete');
   const processor = new XmlJobProcessor();
   processor.startProcessing();
@@ -227,6 +228,8 @@ async function reset() {
   console.log(x);
 }
 
+// const x = await findClusterEvent(db,14,2)
+// console.log(x)
 
 
 // reset()
