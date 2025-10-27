@@ -1,12 +1,18 @@
 import { DerivativeHolding, DerivativeTransaction, Form4Parsed, nonDerivativeHolding, nonDerivativeTransaction } from "../types.js";
 
 type TransactionColumns = string[];
-type AccumulatedTransactions = (string | number | null)[][];
+type AccumulatedTransactions = (string | number | boolean | null)[][];
 type ProcessDerivNonDerivRtn = {
   transactionColumns: TransactionColumns;
   accumulatedTransactionRows: AccumulatedTransactions;
 };
 
+// This function takes a flattened json (now object) and performs tests and qualifications
+// to find if it's a derivative, option execution, etc. It then breaks up the Form 4 entries,
+// (which is what makes up the `flatJson`) and assigns one sql row per entry. So, if a Form 4 has:
+// a option exercise, a buy exercised shares, and sell exercised shares. Those are alloted to one row each. 
+// But in that particular case they are tied together by an `exercise_group_id`.
+// The return is a object consisting of an array of the transaction columns and an array of arrays of the matching data
 export default function formFourProcessor(flatJson: Form4Parsed) {
   // Possible keys from form 4
   const formData = {
@@ -276,7 +282,7 @@ function processDerivNonDeriv(
       null,                             // 'acquired_disposed',
       0,                                // 'transaction_shares',
       null,                             // 'conversion_exercise_price',
-      'holding',                             // 'transaction_code',
+      'holding',                        // 'transaction_code',
       0,                                // 'equity_swap_involved',
       null,                             // 'nature_of_ownership',
       null,                             // 'is_option_exercise',
@@ -296,8 +302,21 @@ function processDerivNonDeriv(
 
   // Ensure no undefined values in accumulatedTransactionRows
   const sanitizedRows = accumulatedTransactionRows.map(row =>
-    row.map(value => value === undefined ? null : value)
+    row.map((value) => {
+      if (value === undefined) {
+        return null;
+      }
+      if (value === true) {
+        return 1;
+      }
+      if (value === false) {
+        return 0;
+      }
+      return value;
+    }
+    )
   );
+  console.log(sanitizedRows);
 
   return { transactionColumns, accumulatedTransactionRows: sanitizedRows };
 }

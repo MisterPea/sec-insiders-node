@@ -23,7 +23,6 @@ interface Database {
  * @param {number} countThreshold Number of insiders that need to have made purchases
  */
 export async function findClusterEvent(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<ClusterEvent[]> {
-
   const query = `
     WITH filtered AS (
       SELECT cik,
@@ -78,6 +77,10 @@ export async function findClusterEvent(db: Database, clusterWindow: number = 7, 
     COUNT(DISTINCT i_a.owner_name) AS insider_count,
     SUM(i_a.insider_total_shares) AS total_shares,
     ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price),2) AS total_value, 
+    -- Comma delineated dollar format
+     '$' || printf('%,d', CAST(ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price), 2) AS INTEGER)) 
+        || SUBSTR(printf('%.2f', ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price), 2)), INSTR(printf('%.2f', ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price), 2)), '.')) 
+    AS total_value_formatted,
     ROUND(AVG(i_a.insider_avg_price),2) AS avg_price_per_insider,
     ROUND(SUM(i_a.insider_avg_price * i_a.insider_total_shares) / SUM(i_a.insider_total_shares),2) AS vwavg_price_across_insiders,
     i_a.start_date,

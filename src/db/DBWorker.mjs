@@ -27,7 +27,7 @@ parentPort.on( 'message', async ( message ) => {
       result = stmt.get( ...params );
     }
     else if ( type === 'get_all' ) {
-      result = stmt.all(...params);
+      result = stmt.all( ...params );
     }
     else if ( type === 'set' ) {
       stmt.bind( ...params ).run();
@@ -44,6 +44,9 @@ parentPort.on( 'message', async ( message ) => {
 
     parentPort.postMessage( { id, result } );
   } catch ( error ) {
+    console.error( 'SQLite bind error:', error.message );
+    console.error( 'Params:', params );
+    // console.error( 'Param types:', Object.entries( params ).map( ( [k, v] ) => [k, typeof v, v] ) );
     parentPort.postMessage( { id, error: error.message } );
   }
 } );

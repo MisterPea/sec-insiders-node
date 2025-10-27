@@ -29,6 +29,7 @@ async function getInitialData(currBatch: string[]) {
     accessionArray.push(...accessionElement);
   });
 
+  // Add issuers not in issuers table
   await db.insertData(`
     INSERT OR REPLACE INTO issuers (cik, tickers, company_name, sic, sic_description)
     VALUES (?, ?, ?, ?, ?)`,
@@ -137,6 +138,8 @@ async function handleProcessingOfXmlUrls(documentData: { url: string, accession:
 async function processNextXmlUrl(): Promise<boolean> {
   try {
     // Atomic operation-we're updating as we're setting
+    //
+    // Get pending jobs
     const result = await db.getData(`
       UPDATE form4_jobs
       SET status='running'
@@ -162,11 +165,12 @@ async function processNextXmlUrl(): Promise<boolean> {
       console.log(`Successfully processed job: ${accession}`);
       return true; // Successfully processed
     } else {
-      
+
       // Mark as failed for later retry or manual inspection
+      const status = processingResult.error === "Cannot convert undefined or null to object" ? "broken_link" : "failed";
       await db.setData(`
         UPDATE form4_jobs 
-        SET status='failed', error_message=?, updated_at=CURRENT_TIMESTAMP 
+        SET status=${status}, error_message=?, updated_at=CURRENT_TIMESTAMP 
         WHERE accession = ?`,
         [JSON.stringify(processingResult.error), accession]
       );
@@ -220,17 +224,25 @@ async function runOrchestrator() {
   processor.startProcessing();
 }
 
+// Reset for failed jobs
 async function reset() {
-  const x = await db.setData(`
-    UPDATE form4_jobs
+  await db.setData(`
+  UPDATE form4_jobs
   SET status = 'pending'
-  WHERE status = 'failed'`, []);
-  console.log(x);
+  WHERE status = 'running'`, []);
 }
 
-// const x = await findClusterEvent(db,14,2)
+async function runFailedJobs() {
+  await reset();
+  const processor = new XmlJobProcessor();
+  processor.startProcessing();
+}
+
+// const x = await findClusterEvent(db,16,2)
 // console.log(x)
 
+// ** Run failed jobs
+// runFailedJobs();
 
-// reset()
-runOrchestrator()
+// ** Initial run
+// runOrchestrator();
