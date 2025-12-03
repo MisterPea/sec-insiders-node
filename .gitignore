@@ -1,3 +1,5 @@
 node_modules
 .DS_Store
 sqlite
+
+sqlite/sec_data.db

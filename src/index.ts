@@ -238,8 +238,8 @@ async function runFailedJobs() {
   processor.startProcessing();
 }
 
-// const x = await findClusterEvent(db,16,2)
-// console.log(x)
+const clusters = await findClusterEvent(db,30,2)
+console.log(clusters)
 
 // ** Run failed jobs
 // runFailedJobs();
