@@ -4,7 +4,8 @@ import { Form4Parsed, SecEntity } from "./types.js";
 import { XMLParser } from 'fast-xml-parser';
 import { DB } from "./db/DB.js";
 import formFourProcessor from "./processing/formFourProcessor.js";
-import { findClusterEvent } from "./processing/findClusters.js";
+import { findClusterEventAvg, findRepeatTransactions } from "./processing/findClusters.js";
+import getSetMovingAverages from "./historicalData/getHistoricalData.js";
 
 const db = new DB();
 
@@ -238,11 +239,21 @@ async function runFailedJobs() {
   processor.startProcessing();
 }
 
-// const x = await findClusterEvent(db,16,2)
-// console.log(x)
+// ** Find clusters - args db, days_look-back, min_num
+// const clusters = await findClusterEventAvg(db,10,3)
+// console.dir(clusters, { depth: null })
 
 // ** Run failed jobs
 // runFailedJobs();
 
 // ** Initial run
 // runOrchestrator();
+
+// ** Get/Set Moving Averages 
+getSetMovingAverages(db)
+// await db.setData(`DROP TABLE moving_averages`,[])
+// console.log("done")
+
+// ** Find repeat, directional discretionary transactions
+// const repeatTransactions = await findRepeatTransactions(db, 10, 2);
+// console.log(repeatTransactions);

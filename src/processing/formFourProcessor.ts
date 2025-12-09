@@ -302,7 +302,7 @@ function processDerivNonDeriv(
 
   // Ensure no undefined values in accumulatedTransactionRows
   const sanitizedRows = accumulatedTransactionRows.map(row =>
-    row.map((value) => {
+    row.map((value: null | boolean | undefined | string | number) => {
       if (value === undefined) {
         return null;
       }
@@ -316,7 +316,6 @@ function processDerivNonDeriv(
     }
     )
   );
-  console.log(sanitizedRows);
 
   return { transactionColumns, accumulatedTransactionRows: sanitizedRows };
 }

@@ -1,3 +1,5 @@
+import { Database } from "../types.js";
+
 /**
  * 
  * @param {number} clusterWindow Number of days to look at for clusters
@@ -13,87 +15,86 @@ interface ClusterEvent {
   end_date: string;
 }
 
-interface Database {
-  getAllData<T = any>(query: string): Promise<T[]>;
-}
-
 /**
- * 
+ * Finds cluster events over a period window. The output excludes 10b5-1(predetermined) transactions
  * @param {number} clusterWindow Number of days to look at for clusters
  * @param {number} countThreshold Number of insiders that need to have made purchases
  */
-export async function findClusterEvent(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<ClusterEvent[]> {
+export async function findClusterEventAvg(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<ClusterEvent[]> {
   const query = `
-    WITH filtered AS (
-      SELECT cik,
-             owner_name,
-             transaction_date,
-             transaction_code,
-             transaction_shares,
-             conversion_exercise_price
-      FROM form4_filings
-      WHERE security_type = 'non-derivative'
-        AND equity_swap_involved = 0
-        AND is_option_exercise = 0
-        AND is_from_exercise = 0
-        AND is_exercise_related_sale = 0
-        AND transaction_code IN ('P', 'S')
-        AND transaction_date >= date('now', '-${clusterWindow} day')   
-    ),
-    ordered AS (
-      SELECT *,
-             julianday(transaction_date)
-               - lag(julianday(transaction_date)) OVER (
-                   PARTITION BY cik, transaction_code
-                   ORDER BY transaction_date
-                 ) AS gap_days
-      FROM filtered
-    ),
-    grouped AS (
-      SELECT *,
-            SUM(CASE WHEN gap_days > 30 OR gap_days IS NULL THEN 1 ELSE 0 END)
-            OVER (PARTITION BY cik, transaction_code ORDER BY transaction_date)
-            AS cluster_id
-      FROM ordered
-    ),
-  insider_avg AS (
-    SELECT
-      cik,
-      transaction_code,
-      cluster_id,
-      owner_name,
-      SUM(transaction_shares * conversion_exercise_price) / SUM(transaction_shares) AS insider_avg_price,
-      SUM(transaction_shares) AS insider_total_shares,
-      MIN(transaction_date) AS start_date,
-      MAX(transaction_date) AS end_date
-    FROM grouped
-    GROUP BY cik, transaction_code, cluster_id, owner_name
-  )
-  SELECT
-    i_a.cik,
-    i.tickers,
-    i_a.transaction_code,
-    i_a.cluster_id,
-    COUNT(DISTINCT i_a.owner_name) AS insider_count,
-    SUM(i_a.insider_total_shares) AS total_shares,
-    ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price),2) AS total_value, 
-    -- Comma delineated dollar format
-     '$' || printf('%,d', CAST(ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price), 2) AS INTEGER)) 
-        || SUBSTR(printf('%.2f', ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price), 2)), INSTR(printf('%.2f', ROUND(SUM(i_a.insider_total_shares * i_a.insider_avg_price), 2)), '.')) 
-    AS total_value_formatted,
-    ROUND(AVG(i_a.insider_avg_price),2) AS avg_price_per_insider,
-    ROUND(SUM(i_a.insider_avg_price * i_a.insider_total_shares) / SUM(i_a.insider_total_shares),2) AS vwavg_price_across_insiders,
-    i_a.start_date,
-    i_a.end_date
-  FROM insider_avg AS i_a
-  LEFT JOIN issuers AS i ON i_a.cik = i.cik
-  GROUP BY i_a.cik, i_a.transaction_code, i_a.cluster_id
-  HAVING insider_count >= ${countThreshold}
-  
-  ORDER BY insider_count DESC;
+    WITH aggregated_data AS (
+        SELECT 
+          t.cik,
+          i.tickers,
+          t.transaction_code,
+          MIN(t.transaction_date) AS first_transaction,
+          MAX(t.transaction_date) AS last_transaction,
+          SUM(t.transaction_shares) AS total_shares,
+          SUM(t.transaction_shares * t.conversion_exercise_price) AS total_value,
+          SUM(t.transaction_shares * t.conversion_exercise_price) / SUM(t.transaction_shares) AS weighted_avg_price,
+          COUNT(DISTINCT t.owner_name) AS num_owners,
+          GROUP_CONCAT(DISTINCT t.accession) AS accessions
+        FROM form4_filings t
+        JOIN issuers i ON t.cik = i.cik
+       WHERE t.transaction_date >= DATE('now', '-${clusterWindow} days')
+         AND t.equity_swap_involved = 0
+         AND t.is_option_exercise = 0
+         AND t.is_from_exercise = 0
+         AND t.is_exercise_related_sale = 0
+         AND t.ten5_1 = 0
+         AND t.transaction_code IN ('P','S')
+       GROUP BY t.cik, t.transaction_code
+    )
+    SELECT *
+    FROM aggregated_data
+    WHERE num_owners >= ${countThreshold}
+    ORDER BY num_owners, total_value DESC
   `;
 
 
+  const clusterData = await db.getAllData(query);
+  return clusterData;
+}
+
+export async function findRepeatTransactions(db: Database, clusterWindow: number, countThreshold: number) {
+  const query = `
+      WITH aggregated_data AS (
+        SELECT 
+          t.cik,
+          i.tickers,
+          t.transaction_code,
+          t.owner_name,
+          COUNT(DISTINCT t.accession) AS tot_transactions,
+          MIN(t.transaction_date) AS first_transaction,
+          MAX(t.transaction_date) AS last_transaction,
+          SUM(t.transaction_shares) AS total_shares,
+          t.sec_owned_post_trx AS shares_owned_post_transaction,
+          SUM(t.transaction_shares * t.conversion_exercise_price) AS total_value,
+          -- multiply by 1.0 to force float division in SQLite
+          SUM(t.transaction_shares * t.conversion_exercise_price) * 1.0 
+            / SUM(t.transaction_shares) AS weighted_avg_price,
+          GROUP_CONCAT(DISTINCT t.accession) AS accessions
+        FROM form4_filings t
+        JOIN issuers i ON t.cik = i.cik
+        WHERE t.transaction_date >= DATE('now', '-${clusterWindow} days')
+          AND t.equity_swap_involved = 0
+          AND t.is_option_exercise = 0
+          AND t.is_from_exercise = 0
+          AND t.is_exercise_related_sale = 0
+          AND t.ten5_1 = 0
+          AND t.transaction_code IN ('P','S')
+          AND t.owner_name <> '' -- if owner_name === ''
+        GROUP BY 
+          t.cik,
+          t.owner_name,
+          t.transaction_code
+      )
+      SELECT *
+      FROM aggregated_data
+      WHERE tot_transactions >= ${countThreshold}
+      ORDER BY total_value DESC;
+  `;
+ 
   const clusterData = await db.getAllData(query);
   return clusterData;
 }

@@ -145,3 +145,9 @@ export type Form4Parsed = {
   derivativeTransaction?: DerivativeTransaction[];
   nonDerivativeTransaction?: nonDerivativeTransaction[];
 };
+
+
+export interface Database {
+  getAllData<T = any>(query: string): Promise<T[]>;
+  setData<T = any>(query: string, []): Promise<T>;
+}
