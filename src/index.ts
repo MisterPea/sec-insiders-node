@@ -6,45 +6,40 @@ import { DB } from "./db/DB.js";
 import formFourProcessor from "./processing/formFourProcessor.js";
 import { findClusterEventAvg, findRepeatTransactions } from "./processing/findClusters.js";
 import getSetMovingAverages from "./historicalData/getHistoricalData.js";
+import { insertCiks } from "./cikFunctions.js";
 
 const db = new DB();
 
 async function initBatchOrchestrator(batchSize = 5) {
+  const cikArray = sp500_cik;
+
   let prevIndex = 0;
-  for (let i = batchSize; i < sp500_cik.length + batchSize; i += batchSize) {
-    const currBatch = sp500_cik.slice(prevIndex, i);
+  for (let i = batchSize; i < cikArray.length + batchSize; i += batchSize) {
+    const currBatch = cikArray.slice(prevIndex, i);
     prevIndex = i;
+
     await getInitialData(currBatch);
   }
 }
 
 async function getInitialData(currBatch: string[]) {
-  // Get initial data array
-  const cikDataArray: SecEntity[] = await getCikData(currBatch);
-  const issuers: string[][] = [];
-  const accessionArray: string[][] = [];
 
-  cikDataArray.forEach((issuer) => {
-    issuers.push([issuer.cik, issuer.tickers.join(', '), issuer.name.toUpperCase(), issuer.sic, issuer.sicDescription]);
-    const accessionElement = buildAccessionBase(issuer);
+  for (const issuer of currBatch) {
+    const accessionArray: string[][] = [];
+
+    const issuersJson: SecEntity[] = await getCikData([issuer]);
+  
+    const accessionElement = buildAccessionBase(issuersJson[0]);
     accessionArray.push(...accessionElement);
-  });
 
-  // Add issuers not in issuers table
-  await db.insertData(`
-    INSERT OR REPLACE INTO issuers (cik, tickers, company_name, sic, sic_description)
-    VALUES (?, ?, ?, ?, ?)`,
-    issuers
-  );
-  console.log(`${issuers.length} companies inserted into issuers table.`);
-
-  await db.insertData(`
+    await db.insertData(`
     INSERT INTO form4_jobs (cik, accession, url)
     VALUES (?, ?, ?)
     ON CONFLICT(url) DO NOTHING`,
-    accessionArray
-  );
-  console.log(`${accessionArray.length} jobs inserted into form4_jobs table.`);
+      accessionArray
+    );
+    console.log(`${accessionArray.length} jobs inserted into form4_jobs table.`);
+  }
 }
 
 
@@ -246,13 +241,14 @@ async function runFailedJobs() {
 // ** Run failed jobs
 // runFailedJobs();
 
+// ** Populate CIK table
+// insertCiks(db)
+
 // ** Initial run
-// runOrchestrator();
+runOrchestrator();
 
 // ** Get/Set Moving Averages 
-getSetMovingAverages(db)
-// await db.setData(`DROP TABLE moving_averages`,[])
-// console.log("done")
+// getSetMovingAverages(db)
 
 // ** Find repeat, directional discretionary transactions
 // const repeatTransactions = await findRepeatTransactions(db, 10, 2);

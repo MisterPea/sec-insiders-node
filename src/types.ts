@@ -150,4 +150,5 @@ export type Form4Parsed = {
 export interface Database {
   getAllData<T = any>(query: string): Promise<T[]>;
   setData<T = any>(query: string, []): Promise<T>;
+  insertData<T = any>(query: string, []): Promise<T>;
 }

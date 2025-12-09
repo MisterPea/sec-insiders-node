@@ -5,7 +5,7 @@ import { AccessionBase, SecEntity } from "./types.js";
 export async function getCikData(ciks: string[]): Promise<SecEntity[]> {
   return Promise.all(
     ciks.map((cik) => apiRequest({
-      url: `https://data.sec.gov/submissions/CIK${cik}.json`,
+      url: `https://data.sec.gov/submissions/CIK${cik.padStart(10, '0')}.json`,
       method: "GET",
       headers: {
         "User-Agent": "Unartful Labs (sysop@misterpea.me)",
