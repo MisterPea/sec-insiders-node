@@ -56,3 +56,17 @@ CREATE TABLE
     exercise_group_id TEXT,
     notes TEXT
   );
+
+
+  CREATE TABLE 
+    IF NOT EXISTS moving_averages (
+      ticker TEXT UNIQUE PRIMARY KEY,
+      long_name TEXT,
+      short_name TEXT,
+      ma20 REAL DEFAULT 0.0,
+      ma200 REAL DEFAULT 0.0,
+      fifty_two_week_high REAL DEFAULT 0.0,
+      fifty_two_week_low REAL DEFAULT 0.0,
+      volume INTEGER DEFAULT 0, 
+      date_string TEXT
+    )
