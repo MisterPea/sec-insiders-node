@@ -57,16 +57,56 @@ CREATE TABLE
     notes TEXT
   );
 
+CREATE TABLE
+  IF NOT EXISTS moving_averages (
+    ticker TEXT UNIQUE PRIMARY KEY,
+    long_name TEXT,
+    short_name TEXT,
+    ma20 REAL DEFAULT 0.0,
+    ma200 REAL DEFAULT 0.0,
+    fifty_two_week_high REAL DEFAULT 0.0,
+    fifty_two_week_low REAL DEFAULT 0.0,
+    volume INTEGER DEFAULT 0,
+    date_string TEXT
+  );
 
-  CREATE TABLE 
-    IF NOT EXISTS moving_averages (
-      ticker TEXT UNIQUE PRIMARY KEY,
-      long_name TEXT,
-      short_name TEXT,
-      ma20 REAL DEFAULT 0.0,
-      ma200 REAL DEFAULT 0.0,
-      fifty_two_week_high REAL DEFAULT 0.0,
-      fifty_two_week_low REAL DEFAULT 0.0,
-      volume INTEGER DEFAULT 0, 
-      date_string TEXT
-    )
+CREATE TABLE
+  IF NOT EXISTS cluster_post (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date_posted TEXT,
+    was_posted TEXT DEFAULT 'pending',
+    cik TEXT,
+    tickers TEXT,
+    company_name TEXT,
+    transaction_code TEXT,
+    first_transaction TEXT,
+    last_transaction TEXT,
+    total_shares INTEGER,
+    total_value REAL,
+    weighted_avg_price REAL,
+    num_owners INTEGER,
+    accessions TEXT
+  );
+
+CREATE TABLE
+  IF NOT EXISTS repeat_transaction_post (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date_posted TEXT,
+    was_posted TEXT DEFAULT 'pending',
+    cik TEXT,
+    tickers TEXT,
+    company_name TEXT,
+    transaction_code TEXT,
+    owner_name TEXT,
+    tot_transactions INTEGER,
+    first_transaction TEXT,
+    last_transaction TEXT,
+    total_shares INTEGER,
+    shares_owned_post_transaction INTEGER,
+    total_value REAL,
+    weighted_avg_price REAL,
+    accessions TEXT
+  );
+
+CREATE TABLE
+  IF NOT EXISTS excluded_officer_titles (title TEXT PRIMARY KEY);

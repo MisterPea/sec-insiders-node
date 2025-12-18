@@ -4,9 +4,10 @@ import { Form4Parsed, SecEntity } from "./types.js";
 import { XMLParser } from 'fast-xml-parser';
 import { DB } from "./db/DB.js";
 import formFourProcessor from "./processing/formFourProcessor.js";
-import { findClusterEventAvg, findRepeatTransactions } from "./processing/findClusters.js";
+import { findClusterPurchases, findClusterSales, findRepeatTransactions } from "./processing/findClusters.js";
 import getSetMovingAverages from "./historicalData/getHistoricalData.js";
 import { insertCiks } from "./cikFunctions.js";
+import { officerTitles } from './officerTitleExclusion.js';
 
 const db = new DB();
 
@@ -28,7 +29,7 @@ async function getInitialData(currBatch: string[]) {
     const accessionArray: string[][] = [];
 
     const issuersJson: SecEntity[] = await getCikData([issuer]);
-  
+
     const accessionElement = buildAccessionBase(issuersJson[0]);
     accessionArray.push(...accessionElement);
 
@@ -124,7 +125,8 @@ async function handleProcessingOfXmlUrls(documentData: { url: string, accession:
   } catch (error) {
     console.error(`Error processing XML for accession ${accession}:`, error);
     return {
-      success: false,
+      // Continue on accession processing errors
+      success: true,
       error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string; }).message : String(error)
     };
   }
@@ -234,9 +236,32 @@ async function runFailedJobs() {
   processor.startProcessing();
 }
 
-// ** Find clusters - args db, days_look-back, min_num
-// const clusters = await findClusterEventAvg(db,10,3)
-// console.dir(clusters, { depth: null })
+// ** Populate officer_title exclusion table 
+// ** Table is used to filter titles from inclusion with sales pull
+// await db.setData(`DELETE FROM excluded_officer_titles`, []);
+// await db.insertData(`
+//   INSERT INTO excluded_officer_titles (title) 
+//   VALUES (?)
+//   ON CONFLICT(title) DO NOTHING;`,
+//   officerTitles.map((t) => [t])
+// );
+
+// ** Find clusters purchases - args db, days_look-back, min_num
+// const purchaseClusters = await findClusterPurchases(db, 45, 3);
+// console.dir(purchaseClusters, { depth: null });
+
+const saleClusters = await findClusterSales(db, 45, 3);
+console.dir(saleClusters, { depth: null });
+
+// const titles = await db.getAllData(`
+//   SELECT DISTINCT officer_title FROM form4_filings
+//   WHERE UPPER(officer_title) <> 'EVP & CHIEF HR OFFICER'
+//   `);
+// console.dir(titles.map(({ officer_title }) => officer_title).join(' ** '));
+
+// ** Find repeat, directional discretionary transactions
+// const repeatTransactions = await findRepeatTransactions(db, 21, 5);
+// console.log(repeatTransactions);
 
 // ** Run failed jobs
 // runFailedJobs();
@@ -245,11 +270,8 @@ async function runFailedJobs() {
 // insertCiks(db)
 
 // ** Initial run
-runOrchestrator();
+// runOrchestrator();
 
 // ** Get/Set Moving Averages 
 // getSetMovingAverages(db)
 
-// ** Find repeat, directional discretionary transactions
-// const repeatTransactions = await findRepeatTransactions(db, 10, 2);
-// console.log(repeatTransactions);
