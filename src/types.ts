@@ -146,9 +146,53 @@ export type Form4Parsed = {
   nonDerivativeTransaction?: nonDerivativeTransaction[];
 };
 
-
 export interface Database {
   getAllData<T = any>(query: string): Promise<T[]>;
   setData<T = any>(query: string, []): Promise<T>;
   insertData<T = any>(query: string, []): Promise<T>;
 }
+
+export type RawSalesOutput = {
+  cik: string;
+  tickers: string;
+  company_name: string;
+  transaction_code: string;
+  has_ten_percent_holder: number,
+  num_days: number,
+  first_transaction: string;
+  last_transaction: string;
+  total_shares: number,
+  pct_sold: number, // zero-led decimal
+  total_value: number,
+  weighted_avg_price: number,
+  num_owners: number,
+  accessions: string; // comma-delineated accession
+  all_are_officers: number,
+  mixed_officer_dir: number,
+  owners: string;
+  titles: string;
+  ma200: number,
+  off_ma200: number; // negative number
+};
+
+export type RawPurchaseOutput = {
+  cik: string,
+  tickers: string,
+  company_name: string,
+  transaction_code: string,
+  first_transaction: string,
+  last_transaction: string,
+  num_days: number,
+  total_shares: number,
+  total_value: number,
+  weighted_avg_price: number,
+  pct_increase: number,
+  num_owners: number,
+  accessions: string,
+  all_are_directors: number,
+  all_are_officers: number,
+  owners: string,
+  titles: string,
+  off_ma20: number,
+  off_ma200: number,
+};

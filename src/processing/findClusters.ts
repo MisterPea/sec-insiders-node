@@ -30,15 +30,25 @@ export async function findClusterPurchases(db: Database, clusterWindow: number =
           t.transaction_code,
           MIN(t.transaction_date) AS first_transaction,
           MAX(t.transaction_date) AS last_transaction,
+          JULIANDAY(MAX(t.transaction_date)) - JULIANDAY(MIN(t.transaction_date)) AS num_days,
           SUM(t.transaction_shares) AS total_shares,
           SUM(t.transaction_shares * t.conversion_exercise_price) AS total_value,
           SUM(t.transaction_shares * t.conversion_exercise_price) / SUM(t.transaction_shares) AS weighted_avg_price,
+
+          -- calculate percentage increase in position
+          CASE
+            WHEN SUM(t.sec_owned_post_trx) - SUM(t.transaction_shares) <= 0 THEN NULL
+            ELSE
+              SUM(t.transaction_shares) * 1.0
+              / (SUM(t.sec_owned_post_trx) - SUM(t.transaction_shares))
+          END AS pct_increase,
+
           COUNT(DISTINCT t.owner_name) AS num_owners,
           GROUP_CONCAT(DISTINCT t.accession) AS accessions,
           MIN(is_director) AS all_are_directors,
           MIN(is_officer) AS all_are_officers,
-          GROUP_CONCAT(DISTINCT UPPER(t.owner_name)) AS owners,
-          GROUP_CONCAT(DISTINCT UPPER(t.officer_title)) AS titles
+          GROUP_CONCAT(UPPER(t.owner_name), ' ** ') AS owners,
+          GROUP_CONCAT(UPPER(t.officer_title),' ** ') AS titles
         FROM form4_filings t
         JOIN issuers i ON t.cik = i.cik
           WHERE t.transaction_date >= DATE('now', '-${clusterWindow} days')
@@ -73,6 +83,11 @@ export async function findClusterPurchases(db: Database, clusterWindow: number =
   return clusterPurchases;
 }
 
+/**
+ * Finds sales cluster events over a period window. The output excludes 10b5-1(predetermined) transactions
+ * @param {number} clusterWindow Number of days to look at for clusters
+ * @param {number} countThreshold Number of insiders that need to have made purchases
+ */
 export async function findClusterSales(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<ClusterEvent[]> {
   const query = `
    WITH aggregated_data AS (
@@ -82,9 +97,16 @@ export async function findClusterSales(db: Database, clusterWindow: number = 7, 
     i.company_name,
     t.transaction_code,
     MIN(t.is_ten_percent) AS has_ten_percent_holder,
+    JULIANDAY(MAX(t.transaction_date)) - JULIANDAY(MIN(t.transaction_date)) AS num_days,
     MIN(t.transaction_date) AS first_transaction,
     MAX(t.transaction_date) AS last_transaction,
     SUM(t.transaction_shares) AS total_shares,
+
+    -- calculate percent of holdings sold
+    CASE
+      WHEN SUM(t.transaction_shares + t.sec_owned_post_trx) = 0 THEN NULL
+      ELSE
+      SUM(t.transaction_shares) * 1.0 / SUM(t.transaction_shares + t.sec_owned_post_trx) END AS pct_sold,
     SUM(t.transaction_shares * t.conversion_exercise_price) AS total_value,
     SUM(t.transaction_shares * t.conversion_exercise_price) / SUM(t.transaction_shares) AS weighted_avg_price,
     COUNT(DISTINCT t.owner_name) AS num_owners,
@@ -96,9 +118,9 @@ export async function findClusterSales(db: Database, clusterWindow: number = 7, 
       WHEN MAX(t.is_officer) = 1 AND MAX(t.is_director) = 1 THEN 1
       ELSE 0
     END AS mixed_officer_dir,
-
-    GROUP_CONCAT(DISTINCT UPPER(t.owner_name)) AS owners,
-    GROUP_CONCAT(DISTINCT UPPER(t.officer_title)) AS titles
+    
+    GROUP_CONCAT(UPPER(t.owner_name), ' ** ') AS owners,
+    GROUP_CONCAT(UPPER(t.officer_title),' ** ') AS titles
 
   FROM form4_filings t
   JOIN issuers i ON t.cik = i.cik
@@ -135,13 +157,11 @@ export async function findClusterSales(db: Database, clusterWindow: number = 7, 
       JOIN moving_averages ma ON aggregated_data.tickers = ma.ticker
       WHERE num_owners >= ${countThreshold}
         AND weighted_avg_price > ma.ma200
-      ORDER BY num_owners DESC, total_value DESC;
+      ORDER BY pct_sold DESC, total_value DESC;
   `;
   const clusterSales = await db.getAllData(query);
   return clusterSales;
 }
-
-
 
 export async function findRepeatTransactions(db: Database, clusterWindow: number, countThreshold: number) {
   const query = `

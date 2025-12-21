@@ -8,6 +8,7 @@ import { findClusterPurchases, findClusterSales, findRepeatTransactions } from "
 import getSetMovingAverages from "./historicalData/getHistoricalData.js";
 import { insertCiks } from "./cikFunctions.js";
 import { officerTitles } from './officerTitleExclusion.js';
+import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 
 const db = new DB();
 
@@ -246,12 +247,14 @@ async function runFailedJobs() {
 //   officerTitles.map((t) => [t])
 // );
 
-// ** Find clusters purchases - args db, days_look-back, min_num
-// const purchaseClusters = await findClusterPurchases(db, 45, 3);
+// ** Find clusters purchases - args: db, days_look-back, min_num
+const purchaseClusters = await findClusterPurchases(db, 45, 3);
+formatPurchaseOutput(purchaseClusters)
 // console.dir(purchaseClusters, { depth: null });
 
-const saleClusters = await findClusterSales(db, 45, 3);
-console.dir(saleClusters, { depth: null });
+// ** Find cluster sales - args: db, days_look-back, min_num
+const saleClusters = (await findClusterSales(db, 45, 3));
+formatSalesOutput(saleClusters)
 
 // const titles = await db.getAllData(`
 //   SELECT DISTINCT officer_title FROM form4_filings
