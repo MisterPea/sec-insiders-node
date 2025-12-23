@@ -196,3 +196,18 @@ export type RawPurchaseOutput = {
   off_ma20: number,
   off_ma200: number,
 };
+
+export interface HtmlStringData {
+  companyName: string;
+  ticker: string;
+  cik: string;
+  windowSize: number;
+  dateStrings: string;
+  numInsiders: number;
+  numShares: number;
+  totalValue: string;
+  titles: string;
+  pctOfHoldings: string;
+  weightAvgLine: string;
+
+}
