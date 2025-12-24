@@ -150,6 +150,7 @@ export interface Database {
   getAllData<T = any>(query: string): Promise<T[]>;
   setData<T = any>(query: string, []): Promise<T>;
   insertData<T = any>(query: string, []): Promise<T>;
+  getData<T = any>(query: string): Promise<T>;
 }
 
 export type RawSalesOutput = {
@@ -226,4 +227,15 @@ export type ClusterInput = {
   accessions: string,
   clusterVersion: string;
   transactionCode: string;
+};
+
+export type ClusterRecord = {
+  cluster_id: string;
+  was_posted_twitter: string;
+  was_posted_bluesky: string;
+  html_twitter: string;
+  html_bluesky: string;
+  generated_at: string;
+  expiration_date: string;
+  accession_urls: string;
 };

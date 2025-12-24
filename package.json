@@ -16,6 +16,7 @@
     "better-sqlite3": "^12.2.0",
     "dotenv": "^17.2.3",
     "fast-xml-parser": "^5.2.5",
+    "puppeteer": "^24.34.0",
     "uuid": "^13.0.0",
     "yahoo-finance2": "^3.10.2"
   },
