@@ -209,5 +209,21 @@ export interface HtmlStringData {
   titles: string;
   pctOfHoldings: string;
   weightAvgLine: string;
-
 }
+
+export type FormatOutput = {
+  twitterHtml: string;
+  blueskyHtml: string;
+  accessions: string;
+  clusterId: string;
+};
+
+export type ClusterInput = {
+  cik: string,
+  ticker: string,
+  first_transaction: string,
+  last_transaction: string,
+  accessions: string,
+  clusterVersion: string;
+  transactionCode: string;
+};

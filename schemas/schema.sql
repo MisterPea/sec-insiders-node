@@ -72,40 +72,14 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS cluster_post (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date_posted TEXT,
-    was_posted TEXT DEFAULT 'pending',
-    cik TEXT,
-    tickers TEXT,
-    company_name TEXT,
-    transaction_code TEXT,
-    first_transaction TEXT,
-    last_transaction TEXT,
-    total_shares INTEGER,
-    total_value REAL,
-    weighted_avg_price REAL,
-    num_owners INTEGER,
-    accessions TEXT
-  );
-
-CREATE TABLE
-  IF NOT EXISTS repeat_transaction_post (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date_posted TEXT,
-    was_posted TEXT DEFAULT 'pending',
-    cik TEXT,
-    tickers TEXT,
-    company_name TEXT,
-    transaction_code TEXT,
-    owner_name TEXT,
-    tot_transactions INTEGER,
-    first_transaction TEXT,
-    last_transaction TEXT,
-    total_shares INTEGER,
-    shares_owned_post_transaction INTEGER,
-    total_value REAL,
-    weighted_avg_price REAL,
-    accessions TEXT
+    cluster_id TEXT PRIMARY KEY,
+    was_posted_twitter TEXT DEFAULT 'pending',
+    was_posted_bluesky TEXT DEFAULT 'pending',
+    html_twitter TEXT,
+    html_bluesky TEXT,
+    generated_at TEXT,
+    expiration_date TEXT,
+    accession_urls TEXT
   );
 
 CREATE TABLE

@@ -1,6 +1,6 @@
 import { buildAccessionBase, getCikData, getXmlData } from "./pipeline.js";
 import sp500_cik from "./sp500_CIK.js";
-import { Form4Parsed, SecEntity } from "./types.js";
+import { Form4Parsed, FormatOutput, SecEntity } from "./types.js";
 import { XMLParser } from 'fast-xml-parser';
 import { DB } from "./db/DB.js";
 import formFourProcessor from "./processing/formFourProcessor.js";
@@ -212,15 +212,7 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
       result[newKey] = value;
     }
   }
-
   return result;
-}
-
-async function runOrchestrator() {
-  await initBatchOrchestrator(10);
-  console.log('Initial ingest complete');
-  const processor = new XmlJobProcessor();
-  processor.startProcessing();
 }
 
 // Reset for failed jobs
@@ -237,30 +229,57 @@ async function runFailedJobs() {
   processor.startProcessing();
 }
 
-// ** Populate officer_title exclusion table 
+async function runOrchestrator() {
+  // Add found accessions / split into jobs
+  // await initBatchOrchestrator(10);
+  // console.info('Initial ingest complete');
+
+  // Process individual accessions/jobs
+  // const processor = new XmlJobProcessor();
+  // await processor.startProcessing();
+
+  // Get current moving averages
+  // await getSetMovingAverages(db);
+
+  // ******************** render html ******************** //
+  // Find cluster purchase/sales 
+  const daysWindow = 45;
+  const saleClusters = await findClusterSales(db, daysWindow, 3);
+  const outputSalesArray = formatSalesOutput(saleClusters);
+
+  const purchaseClusters = await findClusterPurchases(db, daysWindow, 3);
+  const outputPurchaseArray = formatPurchaseOutput(purchaseClusters);
+
+  const clusterOutputs: FormatOutput[] = [...outputSalesArray, ...outputPurchaseArray];
+
+  // Add cluster html string to the db
+  await db.insertData(`
+    INSERT INTO cluster_post (cluster_id, html_twitter, html_bluesky, accession_urls, generated_at, expiration_date)
+    VALUES (?, ?, ?, ?, DATETIME('now'), DATETIME('now', '+' || ? || ' days'))
+    ON CONFLICT(cluster_id) DO NOTHING 
+    `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow]));
+
+  // Create image
+}
+
+
+
+// ******************* 1
+// **** Initial run ****
+runOrchestrator();
+
+
+// ********** Populate officer_title exclusion table ********** //
 // ** Table is used to filter titles from inclusion with sales pull
-// await db.setData(`DELETE FROM excluded_officer_titles`, []);
-// await db.insertData(`
-//   INSERT INTO excluded_officer_titles (title) 
-//   VALUES (?)
-//   ON CONFLICT(title) DO NOTHING;`,
-//   officerTitles.map((t) => [t])
-// );
-
-// ** Find clusters purchases - args: db, days_look-back, min_num
-const purchaseClusters = await findClusterPurchases(db, 45, 3);
-formatPurchaseOutput(purchaseClusters)
-// console.dir(purchaseClusters, { depth: null });
-
-// ** Find cluster sales - args: db, days_look-back, min_num
-const saleClusters = (await findClusterSales(db, 45, 3));
-formatSalesOutput(saleClusters)
-
-// const titles = await db.getAllData(`
-//   SELECT DISTINCT officer_title FROM form4_filings
-//   WHERE UPPER(officer_title) <> 'EVP & CHIEF HR OFFICER'
-//   `);
-// console.dir(titles.map(({ officer_title }) => officer_title).join(' ** '));
+async function populateOfficerTitleExclusion() {
+  await db.setData(`DELETE FROM excluded_officer_titles`, []);
+  await db.insertData(`
+    INSERT INTO excluded_officer_titles (title) 
+    VALUES (?)
+    ON CONFLICT(title) DO NOTHING;`,
+    officerTitles.map((t) => [t])
+  );
+}
 
 // ** Find repeat, directional discretionary transactions
 // const repeatTransactions = await findRepeatTransactions(db, 21, 5);
@@ -272,9 +291,7 @@ formatSalesOutput(saleClusters)
 // ** Populate CIK table
 // insertCiks(db)
 
-// ** Initial run
-// runOrchestrator();
 
-// ** Get/Set Moving Averages 
-// getSetMovingAverages(db)
+
+
 

@@ -1,10 +1,51 @@
-import { HtmlStringData, RawPurchaseOutput, RawSalesOutput } from "../types.js";
+import { ClusterInput, FormatOutput, HtmlStringData, RawPurchaseOutput, RawSalesOutput } from "../types.js";
+import crypto from 'node:crypto';
 
+// Format float into dollar-denominated string
 const formatDollars = (dollarFloat: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(dollarFloat);
+
+// Format float (0-1) into a percent-suffixed string
 const formatPercent = (pctFloat: number) => new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(pctFloat);
+
+// Find the first ticker if a string contains multiple, comma-separated strings
 const singleTicker = (tickers: string) => tickers.split(', ')[0];
-// const dayFormat = (numDays: number, firstTransaction: string, lastTransaction: string) => numDays === 0 ? `1 day window (${lastTransaction})` : `${numDays + 1} day window (${firstTransaction} → ${lastTransaction})`;
+
+// Determine if we show a single date or a start *and* end date 
 const dayFormat = (firstTransaction: string, lastTransaction: string) => firstTransaction === lastTransaction ? lastTransaction : `${firstTransaction} → ${lastTransaction}`;
+
+// Takes a string of comma-separated accessions and returns an array or accession strings
+const createAccessionLinkArray = (accessions: string, cik: string): string[] => {
+  return accessions.split(',').map((a) => {
+    const accessionDash = a;
+    const accessionTrim = a.replaceAll('-', '');
+    const cikNum = Number(cik);
+    const urlFormat = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionTrim}/${accessionDash}-index.html`;
+    return urlFormat;
+  });
+};
+
+function makeClusterId(input: ClusterInput) {
+  const { cik, clusterVersion, accessions, first_transaction, last_transaction, transactionCode } = input;
+
+  const normalizeAccession = (a: string) => a.trim().replace(/-/g, "");
+
+  const accessionArray = accessions.split(',');
+
+  const sortedAccessions = [...new Set(accessionArray.map(normalizeAccession))].sort();
+
+  const canonical = JSON.stringify({
+    v: clusterVersion,
+    cik: cik,
+    tc: transactionCode,
+    first: first_transaction,
+    last: last_transaction,
+    acc: sortedAccessions,
+  });
+  const hash = crypto.createHash("sha256").update(canonical).digest("hex");
+  return hash;
+}
+
+// Format float into a compact dollar-denominated string
 const compactFormat = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -12,13 +53,20 @@ const compactFormat = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2
 });
 
-export function formatSalesOutput(sales: RawSalesOutput[]) {
+/**
+ * Converter of raw sales data into info that can be converted to html
+ * @param {Array<RawSalesOutput>} sales Array of sales data
+ * @returns {Array<FormatOutput>}
+ */
+export function formatSalesOutput(sales: RawSalesOutput[]): FormatOutput[] {
+  const outputArray: FormatOutput[] = [];
   for (let i = 0; i < sales.length; i += 1) {
     const {
       cik,
       tickers,
       company_name,
-      has_ten_percent_holder,
+      // transaction_code,
+      // has_ten_percent_holder,
       num_days,
       first_transaction,
       last_transaction,
@@ -28,19 +76,15 @@ export function formatSalesOutput(sales: RawSalesOutput[]) {
       weighted_avg_price,
       num_owners,
       accessions,
-      all_are_officers,
-      mixed_officer_dir,
-      owners,
+      // all_are_officers,
+      // mixed_officer_dir,
+      // owners,
       titles,
-      ma200,
+      // ma200,
       off_ma200
     } = sales[i];
 
-    // const title = `Sales activity - ${company_name} (${singleTicker(tickers)}) | CIK:${cik}`;
-
-    const dollarFormat = formatDollars(total_value);
     const pctFormat = formatPercent(pct_sold);
-    // const timePeriod = `Over a ${dayFormat(num_days, first_transaction, last_transaction)}, ${num_owners} insiders sold ${total_shares} shares, totaling ${dollarFormat}. These sales account for ${pctFormat} of their collective holdings.`;
 
     const movingAvgPctAbove = (): string => {
       const pct = off_ma200 / -100;
@@ -48,19 +92,12 @@ export function formatSalesOutput(sales: RawSalesOutput[]) {
       const outputWithSuffix = `${formatPercent(pct)} ${suffix}`;
       return outputWithSuffix;
     };
+
     const sharePriceFormat = formatDollars(weighted_avg_price);
+
     const context = `The weighted average sale price was ${sharePriceFormat}/share - ${movingAvgPctAbove()} the 200-day MA.`;
 
     const titlesFormat = [...new Set(titles.split('**').map(item => item.trim()))].join(' / ');
-
-
-    const linkArray = accessions.split(',').map((a) => {
-      const accessionDash = a;
-      const accessionTrim = a.replaceAll('-', '');
-      const cikNum = Number(cik);
-      const urlFormat = `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accessionTrim}/${accessionDash}-index.html`;
-      return urlFormat;
-    });
 
     const aggregatedOutput: HtmlStringData = {
       companyName: company_name,
@@ -76,20 +113,38 @@ export function formatSalesOutput(sales: RawSalesOutput[]) {
       totalValue: compactFormat.format(total_value)
     };
 
-    const html = createHtmlString(aggregatedOutput);
-    console.log(html, "\n\n");
+    const accessionArray = createAccessionLinkArray(accessions, cik);
+    const twitterHtml = createHtmlString(aggregatedOutput, false, true);
+    const blueskyHtml = createHtmlString(aggregatedOutput, false, false);
 
-
+    const clusterInput: ClusterInput = {
+      cik,
+      ticker: singleTicker(tickers),
+      first_transaction,
+      last_transaction,
+      accessions,
+      clusterVersion: 'v1',
+      transactionCode: 'S'
+    };
+    const clusterId = makeClusterId(clusterInput);
+    outputArray.push({ twitterHtml, blueskyHtml, accessions: JSON.stringify(accessionArray), clusterId });
   };
+  return outputArray;
 }
 
-export function formatPurchaseOutput(purchases: RawPurchaseOutput[]) {
+/**
+ * Converter of raw purchase data into info that can be converted to html
+ * @param {Array<RawPurchaseOutput>} purchases Array of purchase data
+ * @returns {Array<FormatOutput>}
+ */
+export function formatPurchaseOutput(purchases: RawPurchaseOutput[]): FormatOutput[] {
+  const outputArray: FormatOutput[] = [];
   for (let i = 0; i < purchases.length; i += 1) {
     const {
       cik,
       tickers,
       company_name,
-      transaction_code,
+      // transaction_code,
       first_transaction,
       last_transaction,
       num_days,
@@ -99,22 +154,17 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]) {
       pct_increase,
       num_owners,
       accessions,
-      all_are_directors,
-      all_are_officers,
-      owners,
+      // all_are_directors,
+      // all_are_officers,
+      // owners,
       titles,
       off_ma20,
       off_ma200,
     } = purchases[i];
 
-    const title = `Purchase activity - ${company_name} (${singleTicker(tickers)}) | CIK:${cik}`;
-
-    const dollarFormat = formatDollars(total_value);
     const pctFormat = formatPercent(pct_increase);
-    const timePeriod = `Over a ${dayFormat(num_days, first_transaction, last_transaction)}, ${num_owners} insiders purchased ${total_shares} shares, totaling ${dollarFormat}. This represents a ${pctFormat} increase in their collective holdings.`;
 
     const sharePriceFormat = formatDollars(weighted_avg_price);
-
 
     const movAvgOffset = () => {
       const off20ma = formatPercent(off_ma20 / 100);
@@ -125,10 +175,12 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]) {
       const off200Agg = `${off200ma} ${off200suffix} the 200-day MA`;
       return { m20: off20Agg, m200: off200Agg };
     };
-    const { m20, m200 } = movAvgOffset();
-    const priceAverage = `The weighted average purchase price was ${sharePriceFormat}/share - ${m20} and ${m200}`;
-    const titlesFormat = [...new Set(titles.split('**').map(item => item.trim()))].join(' / ');
 
+    const { m20, m200 } = movAvgOffset();
+
+    const priceAverage = `The weighted average purchase price was ${sharePriceFormat}/share - ${m20} and ${m200}`;
+
+    const titlesFormat = [...new Set(titles.split('**').map(item => item.trim()))].join(' / ');
 
     const aggregatedOutput: HtmlStringData = {
       companyName: company_name,
@@ -144,12 +196,34 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]) {
       totalValue: compactFormat.format(total_value)
     };
 
-    const html = createHtmlString(aggregatedOutput, true);
-    console.log('\n\n', html);
+    const accessionArray = createAccessionLinkArray(accessions, cik);
+    const twitterHtml = createHtmlString(aggregatedOutput, true, true);
+    const blueskyHtml = createHtmlString(aggregatedOutput, true, false);
+
+    const clusterInput: ClusterInput = {
+      cik,
+      ticker: singleTicker(tickers),
+      first_transaction,
+      last_transaction,
+      accessions,
+      clusterVersion: 'v1',
+      transactionCode: 'P'
+    };
+
+    const clusterId = makeClusterId(clusterInput);
+    outputArray.push({ twitterHtml, blueskyHtml, accessions: JSON.stringify(accessionArray), clusterId });
   }
+  return outputArray;
 };
 
-function createHtmlString(documentInfo: HtmlStringData, isPurchase = false, isTwitter = true): string {
+/**
+ * Function to create a html-string of output from data found from formatSaleOutput/formatPurchaseOutput
+ * @param {HtmlStringData} documentInfo Data derived from formatSaleOutput and formatPurchaseOutput
+ * @param {boolean} isPurchase Boolean flag to denote whether the transactions are purchases or not
+ * @param {boolean} isTwitter Boolean flag to denote whether output is intended for twitter ot not
+ * @returns {string} Returns a string version of the html document
+ */
+function createHtmlString(documentInfo: HtmlStringData, isPurchase: boolean = false, isTwitter: boolean = true): string {
   const {
     companyName,
     ticker,

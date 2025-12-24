@@ -1,26 +1,11 @@
-import { Database } from "../types.js";
-
-/**
- * 
- * @param {number} clusterWindow Number of days to look at for clusters
- * @param {number} countThreshold Number of insiders that need to have made purchases
- */
-
-interface ClusterEvent {
-  cik: string;
-  transaction_code: string;
-  insider_count: number;
-  total_shares: number;
-  start_date: string;
-  end_date: string;
-}
+import { Database, RawPurchaseOutput, RawSalesOutput } from "../types.js";
 
 /**
  * Finds purchase cluster events over a period window. The output excludes 10b5-1(predetermined) transactions
  * @param {number} clusterWindow Number of days to look at for clusters
  * @param {number} countThreshold Number of insiders that need to have made purchases
  */
-export async function findClusterPurchases(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<ClusterEvent[]> {
+export async function findClusterPurchases(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<RawPurchaseOutput[]> {
   const query = `
     WITH aggregated_data AS (
         SELECT 
@@ -88,7 +73,7 @@ export async function findClusterPurchases(db: Database, clusterWindow: number =
  * @param {number} clusterWindow Number of days to look at for clusters
  * @param {number} countThreshold Number of insiders that need to have made purchases
  */
-export async function findClusterSales(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<ClusterEvent[]> {
+export async function findClusterSales(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<RawSalesOutput[]> {
   const query = `
    WITH aggregated_data AS (
   SELECT 
