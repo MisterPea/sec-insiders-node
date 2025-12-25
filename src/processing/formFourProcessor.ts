@@ -33,6 +33,7 @@ export default function formFourProcessor(flatJson: Form4Parsed) {
     derivativeTransaction: [],
     nonDerivativeHolding: [],
     derivativeHolding: [],
+    remarks: '',
     footnotes: []
   };
 
@@ -47,7 +48,7 @@ export default function formFourProcessor(flatJson: Form4Parsed) {
     }
   });
 
-  const { footnotes } = formData;
+  const { footnotes, remarks } = formData;
 
   let flatNotes = null;
   if (Array.isArray(footnotes)) {
@@ -57,10 +58,19 @@ export default function formFourProcessor(flatJson: Form4Parsed) {
     }
   }
 
+  let flatRemarks = null;
+  if (remarks) {
+    if (typeof remarks !== 'string') {
+      flatRemarks = JSON.stringify(remarks);
+    } else {
+      flatRemarks = remarks;
+    }
+  }
+
   // The prefixes are included with every line of the transaction - This information doesn't change per-transaction. So, if we have an exercise and sale in the same Form 4 it will include the same prefix info for each row of that form.
   const { accession, issuerCik, rptOwnerName, issuerTradingSymbol, periodOfReport, documentType, aff10b5One, isOfficer, isDirector, isOther, officerTitle, isTenPercentOwner, derivativeTransaction, nonDerivativeTransaction, derivativeHolding, nonDerivativeHolding } = formData;
-  const colPrefix = ['is_amendment', 'notes', 'accession', 'cik', 'owner_name', 'period_of_report', 'form_type', 'ten5_1', 'is_officer', 'is_director', 'is_other', 'officer_title', 'is_ten_percent'];
-  const rowPrefix = [isAmendment(documentType), flatNotes, accession, issuerCik, rptOwnerName, periodOfReport, toString(documentType), boolToInt(aff10b5One), boolToInt(isOfficer), boolToInt(isDirector), boolToInt(isOther), officerTitle, boolToInt(isTenPercentOwner)];
+  const colPrefix = ['is_amendment', 'notes', 'accession', 'cik', 'owner_name', 'period_of_report', 'form_type', 'ten5_1', 'is_officer', 'is_director', 'is_other', 'officer_title', 'is_ten_percent', 'remarks'];
+  const rowPrefix = [isAmendment(documentType), flatNotes, accession, issuerCik, rptOwnerName, periodOfReport, toString(documentType), boolToInt(aff10b5One), boolToInt(isOfficer), boolToInt(isDirector), boolToInt(isOther), officerTitle, boolToInt(isTenPercentOwner), flatRemarks];
 
   const exerciseIdSeed = `${accession}:${rptOwnerName.replaceAll(' ', '_')}:${issuerTradingSymbol}`;
 
@@ -246,7 +256,7 @@ function processDerivNonDeriv(
       null,                             // 'acquired_disposed',
       0,                                // 'transaction_shares',
       conversionOrExercisePrice,        // 'conversion_exercise_price',
-      'holding',                             // 'transaction_code',
+      'holding',                        // 'transaction_code',
       0,                                // 'equity_swap_involved',
       null,                             // 'nature_of_ownership',
       null,                             // 'is_option_exercise',
