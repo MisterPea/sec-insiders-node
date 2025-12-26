@@ -189,6 +189,7 @@ export type RawPurchaseOutput = {
   weighted_avg_price: number,
   pct_increase: number,
   num_owners: number,
+  num_null_titles: number,
   accessions: string,
   all_are_directors: number,
   all_are_officers: number,

@@ -22,8 +22,8 @@ async function _claimNextClusterPost(db: Database): Promise<ClusterRecord | unde
 }
 
 async function _screenshotHtmlToFile(page: puppeteer.Page, htmlString: string, outputPath: string, aspectRatio: string = 'twitter') {
-  const width = aspectRatio === 'twitter' ? 1500 : 1500; // change when bluesky is figured out
-  const height = aspectRatio === 'twitter' ? 1000 : 1000;
+  const width = aspectRatio === 'twitter' ? 1500 : 1500; // twitter: 3/2 - bluesky: 4/3
+  const height = aspectRatio === 'twitter' ? 1000 : 1125;
 
   await page.goto('about:blank', { waitUntil: 'load' });
 
