@@ -13,7 +13,8 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/db/DBWorker.js"
+    "src/db/DBWorker.js",
+    "src/imageHandling/postImages.ts"
   ],
   "exclude": [
     "node_modules"

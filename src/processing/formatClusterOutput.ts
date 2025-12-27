@@ -154,6 +154,7 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]): FormatOutp
       pct_increase,
       num_owners,
       accessions,
+      num_null_titles,
       // all_are_directors,
       // all_are_officers,
       // owners,
@@ -180,7 +181,9 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]): FormatOutp
 
     const priceAverage = `The weighted average purchase price was ${sharePriceFormat}/share - ${m20} and ${m200}`;
 
-    const titlesFormat = [...new Set(titles.split('**').map(item => item.trim()))].join(' / ');
+    const titlesArray = [...new Set(titles.split('**').map(item => item.trim()))];
+    const nullAdditions = num_null_titles > 0 ? `${num_null_titles} UNNAMED INSIDERS` : '';
+    const titlesFormat = [...titlesArray, nullAdditions].join(' / ');
 
     const aggregatedOutput: HtmlStringData = {
       companyName: company_name,
@@ -269,145 +272,162 @@ function createHtmlString(documentInfo: HtmlStringData, isPurchase: boolean = fa
       <link
         href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@100..1000&family=Google+Sans+Flex:ROND@0..100&display=swap"
         rel="stylesheet">
-      <style>
-        :root {
-          --black: #1b1b1b;
-          --dark-blue: #12374b;
-          --dark-blue-accent: #05283a;
-        }
+        <style>
+          :root {
+            --black: #1b1b1b;
+            --dark-blue: #12374b;
+            --dark-blue-accent: #05283a;
+          }
 
-        html {
-          font-size: 2vw;
-        }
+          html {
+            font-size: 2vw;
+          }
 
-        body {
-          aspect-ratio: 3 / 2;
-          overflow: hidden;
-          font-family: "Google Sans Flex", sans-serif;
-          font-optical-sizing: auto;
-          font-style: normal;
-          font-variation-settings: "slnt" 0, "GRAD" 0, "ROND" 25;
-        }
+          body {
+            aspect-ratio: 3 / 2;
+            overflow: hidden;
+            font-family: "Google Sans Flex", sans-serif;
+            font-optical-sizing: auto;
+            font-style: normal;
+            font-variation-settings: "slnt" 0, "GRAD" 0, "ROND" 25;
+          }
 
-        *,
-        html,
-        body {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-          color: var(--dark-blue);
-        }
+          body:has(.bluesky) {
+            aspect-ratio: 4 / 3;
+          }
 
-        .bold {
-          font-weight: 650;
-        }
+          *,
+          html,
+          body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            color: var(--dark-blue);
+          }
 
-        .semibold {
-          font-weight: 600;
-        }
+          .bold {
+            font-weight: 650;
+          }
 
-        .accent {
-          font-weight: 550;
-          color: var(--dark-blue-accent)
-        }
+          .semibold {
+            font-weight: 600;
+          }
 
-        .cik {
-          font-weight: 200;
-          opacity: 0.8;
-        }
+          .accent {
+            font-weight: 550;
+            color: var(--dark-blue-accent)
+          }
 
-        .regular {
-          font-weight: 400;
-        }
+          .cik {
+            font-weight: 200;
+            opacity: 0.8;
+          }
 
-        .main-content {
-          padding: 1.5rem;
-          height: 100%;
-          width: auto;
-          position: relative;
-          background-color: rgb(246, 246, 246);
-          overflow: hidden;
-          
-          /* Honeycomb */
-          background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 86.2443 97.6668"><path opacity="0.125" d="M43.1221,1c.9121,0,1.8118.2411,2.6018.6972l36.9185,21.3148c1.6049.9266,2.6018,2.6534,2.6018,4.5065v42.6297c.0001,1.8531-.9969,3.5799-2.6017,4.5065l-36.9184,21.315c-.79.4561-1.6897.6972-2.6018.6972s-1.8119-.2411-2.6018-.6971L3.6019,74.6548c-1.6049-.9266-2.6018-2.6534-2.6018-4.5065V27.5186c-.0001-1.8531.9969-3.5799,2.6017-4.5065L40.5202,1.6972c.79-.4561,1.6897-.6972,2.6019-.6972M43.1221,0c-1.0712,0-2.142.277-3.1019.8311L3.1018,22.1461c-1.9194,1.1082-3.1018,3.1562-3.1018,5.3725v42.6297c.0001,2.2163,1.1825,4.2643,3.1019,5.3725l36.9185,21.3148c.9596.554,2.0309.8311,3.1018.8311s2.142-.277,3.1018-.8311l36.9184-21.315c1.9194-1.1082,3.1018-3.1562,3.1018-5.3725V27.5184c-.0001-2.2163-1.1825-4.2643-3.1019-5.3725L46.2239.8311c-.9596-.554-2.0309-.8311-3.1018-.8311h0Z"/></svg>');
-          background-size: 7rem 7.5rem;
-          background-position: 10rem;
-          background-repeat: repeat;
-        }
+          .regular {
+            font-weight: 400;
+          }
 
-        .title {
-          background-color: var(--dark-blue-accent);
-          padding: 0.75rem 1rem 0;
-          color: #fff;
-          width: fit-content;
-          letter-spacing: 5%;
-          font-size: 1.25rem;
-          border-bottom-right-radius: -2rem;
-        }
+          .main-content {
+            padding: 1.5rem;
+            height: 100%;
+            width: auto;
+            position: relative;
+            background-color: rgb(246, 246, 246);
+            overflow: hidden;
 
-        .company-title {
-          color: #fff;
-          background-color: var(--dark-blue-accent);
-          padding: 1rem;
-          border-bottom-left-radius: 1.25rem;
-          border-bottom-right-radius: 1.25rem;
-          border-top-right-radius: 1.25rem;
-        }
+            /* Honeycomb */
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 86.2443 97.6668"><path opacity="0.125" d="M43.1221,1c.9121,0,1.8118.2411,2.6018.6972l36.9185,21.3148c1.6049.9266,2.6018,2.6534,2.6018,4.5065v42.6297c.0001,1.8531-.9969,3.5799-2.6017,4.5065l-36.9184,21.315c-.79.4561-1.6897.6972-2.6018.6972s-1.8119-.2411-2.6018-.6971L3.6019,74.6548c-1.6049-.9266-2.6018-2.6534-2.6018-4.5065V27.5186c-.0001-1.8531.9969-3.5799,2.6017-4.5065L40.5202,1.6972c.79-.4561,1.6897-.6972,2.6019-.6972M43.1221,0c-1.0712,0-2.142.277-3.1019.8311L3.1018,22.1461c-1.9194,1.1082-3.1018,3.1562-3.1018,5.3725v42.6297c.0001,2.2163,1.1825,4.2643,3.1019,5.3725l36.9185,21.3148c.9596.554,2.0309.8311,3.1018.8311s2.142-.277,3.1018-.8311l36.9184-21.315c1.9194-1.1082,3.1018-3.1562,3.1018-5.3725V27.5184c-.0001-2.2163-1.1825-4.2643-3.1019-5.3725L46.2239.8311c-.9596-.554-2.0309-.8311-3.1018-.8311h0Z"/></svg>');
+            background-size: 7rem 7.5rem;
+            background-position: 10rem;
+            background-repeat: repeat;
+          }
 
-        .company-title span {
-          color: #fff;
-        }
+          .title {
+            background-color: var(--dark-blue-accent);
+            padding: 0.75rem 1rem 0;
+            color: #fff;
+            width: fit-content;
+            letter-spacing: 5%;
+            font-size: 1.25rem;
+            border-bottom-right-radius: -2rem;
+          }
 
-        .main-content.purchase .title,
-        .main-content.purchase .company-title,
-        .main-content.purchase .company-title span {
-          background-color: #29a25c;
-          color: #fff;
-        }
+          .bluesky>.title {
+            font-size: 1.5rem;
+          }
 
-        .info-text {
-          background: linear-gradient(180deg, rgba(246, 246, 246, 1) 0%, rgba(246, 246, 246, 1) 50%, rgba(246, 246, 246, 0) 100%);
-          height: 100%;
-          width: 100vw;
-          margin: 0 -1.5rem;
-          padding: 0 1.5rem;
-        }
+          .company-title {
+            color: #fff;
+            background-color: var(--dark-blue-accent);
+            padding: 1rem;
+            border-bottom-left-radius: 1.25rem;
+            border-bottom-right-radius: 1.25rem;
+            border-top-right-radius: 1.25rem;
+          }
 
-        p {
-          padding-top: 1.125rem;
-          font-size: 1.65rem;
-          text-wrap: balance;
-        }
+          .bluesky>.company-title {
+            font-size: 2.25rem;
+          }
 
-        .footer-wrap {
-          width: 100%;
-          display: flex;
-          justify-content: flex-end;
-          position: absolute;
-          bottom: 0;
-          right: 1.5rem;
-        }
+          .company-title span {
+            color: #fff;
+          }
 
-        .footer {
-          font-size: 0.9rem;
-          padding: 0.25rem 0.5rem;
-          font-weight: 300;
-          letter-spacing: 3%;
-          color: var(--black);
-          background-color: #fff;
-          width: fit-content;
-        }
-      </style>
+          .main-content.purchase .title,
+          .main-content.purchase .company-title,
+          .main-content.purchase .company-title span {
+            background-color: #29a25c;
+            color: #fff;
+          }
+
+          .info-text {
+            background: linear-gradient(180deg, rgba(246, 246, 246, 1) 0%, rgba(246, 246, 246, 1) 50%, rgba(246, 246, 246, 0) 100%);
+            height: 100%;
+            width: 100vw;
+            margin: 0 -1.5rem;
+            padding: 0 1.5rem;
+          }
+
+          p {
+            padding-top: 1.125rem;
+            font-size: 1.65rem;
+            text-wrap: balance;
+          }
+
+          .bluesky p {
+            font-size: 1.7rem;
+            text-wrap-style: stable;
+          }
+
+          .footer-wrap {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            position: absolute;
+            bottom: 0;
+            right: 1.5rem;
+          }
+
+          .footer {
+            font-size: 0.9rem;
+            padding: 0.25rem 0.5rem;
+            font-weight: 300;
+            letter-spacing: 3%;
+            color: var(--black);
+            background-color: #fff;
+            width: fit-content;
+          }
+        </style>
     </head>
 
     <body>
-      <div class="main-content${isPurchase ? ' purchase' : ''}">
+      <div class="main-content${isPurchase ? ' purchase' : ''}${isTwitter ? '' : ' bluesky'}">
         <h1 class="title semibold">${doc.title}</h1>
         <h1 class="company-title bold">${companyName} <span class="semibold">(${ticker})</span> <span class="semibold cik">CIK:${cik}</span>
         </h1>
         <div class="info-text regular">
-          <p>${windowStart} ${aOrAn} ${windowSize} day window (${dateStrings}), <span class="accent">${numInsiders} insiders</span> ${doc.purchaseSold} <span
-              class="accent">${numShares >> 0} shares</span>, totaling <span class="accent">${totalValue}</span>.</p>
+          <p>${windowStart} ${aOrAn} ${windowSize} day window (${dateStrings}), 
+          <span class="accent">${numInsiders} insiders</span> ${doc.purchaseSold} <span class="accent">${numShares >> 0} shares</span>, totaling <span class="accent">${totalValue}</span>.</p>
           ${doc.amtOfHoldings}
           <p>${weightAvgLine}</p>
           <p>The titles of the ${doc.buyerSeller} are: <span class="accent">${titles}</span></p>

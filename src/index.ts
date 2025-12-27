@@ -1,16 +1,18 @@
-import { buildAccessionBase, getCikData, getXmlData } from "./pipeline.js";
-import sp500_cik from "./sp500_CIK.js";
-import { Form4Parsed, FormatOutput, SecEntity } from "./types.js";
-import { XMLParser } from 'fast-xml-parser';
 import { DB } from "./db/DB.js";
-import formFourProcessor from "./processing/formFourProcessor.js";
+import { buildAccessionBase, getCikData } from "./pipeline.js";
+import sp500_cik from "./sp500_CIK.js";
+import { FormatOutput, SecEntity } from "./types.js";
+import { XmlJobProcessor } from './processing/XmlJobProcessor.js';
 import { findClusterPurchases, findClusterSales, findRepeatTransactions } from "./processing/findClusters.js";
 import getSetMovingAverages from "./historicalData/getHistoricalData.js";
 import { insertCiks } from "./cikFunctions.js";
 import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
+import { createImages } from './imageHandling/createImage.js';
+import { postImageTwitter } from "./imageHandling/postImages.js";
 
 const db = new DB();
+
 
 async function initBatchOrchestrator(batchSize = 5) {
   const cikArray = sp500_cik;
@@ -44,177 +46,6 @@ async function getInitialData(currBatch: string[]) {
   }
 }
 
-
-class XmlJobProcessor {
-  private isProcessing = false;
-  private maxConcurrent = 3;
-  private activeJobs = 0;
-
-  async startProcessing() {
-    if (this.isProcessing) {
-      console.log('Processing already in progress');
-      return;
-    }
-
-    this.isProcessing = true;
-    console.log('Starting XML job processing...');
-
-    // Process multiple jobs concurrently
-    const workers = Array(this.maxConcurrent).fill(null).map(() => this.worker());
-    await Promise.all(workers);
-
-    this.isProcessing = false;
-    console.log('XML job processing completed');
-  }
-
-  private async worker() {
-    while (this.isProcessing) {
-      if (this.activeJobs >= this.maxConcurrent) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        continue;
-      }
-
-      this.activeJobs++;
-
-      try {
-        const hasMoreJobs = await processNextXmlUrl();
-        if (!hasMoreJobs) {
-          this.isProcessing = false; // Signal other workers to stop
-        }
-      } catch (error) {
-        console.error('Worker error:', error);
-      } finally {
-        this.activeJobs--;
-      }
-
-      // Small delay between jobs
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-  }
-}
-
-
-/**
- * @param {Object} documentData takes in an object of url, accession, and cik
- * @returns 
- */
-async function handleProcessingOfXmlUrls(documentData: { url: string, accession: string, cik: string; }) {
-  const { url, accession, cik } = documentData;
-
-  try {
-    const xmlData = await getXmlData(url);
-    const parser = new XMLParser({ ignoreDeclaration: true });
-    const { ownershipDocument } = parser.parse(xmlData);
-
-    const flatJson = { accession, ...flattenTree(ownershipDocument), issuerCik: cik };
-
-    const formData = formFourProcessor(flatJson as Form4Parsed);
-
-    const { cols, rows } = formData;
-
-    const dataReturn = await db.insertData(`
-      INSERT OR REPLACE INTO form4_filings (${cols.join(', ')})
-      VALUES (${new Array(cols.length).fill('?').join(', ')})`,
-      rows
-    );
-
-    if (dataReturn.inserted && dataReturn.inserted > 0) {
-      return { success: true, inserted: dataReturn.inserted };
-    } else {
-      return { success: false, error: 'No rows inserted' };
-    }
-  } catch (error) {
-    console.error(`Error processing XML for accession ${accession}:`, error);
-    return {
-      // Continue on accession processing errors
-      success: true,
-      error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string; }).message : String(error)
-    };
-  }
-}
-
-//
-async function processNextXmlUrl(): Promise<boolean> {
-  try {
-    // Atomic operation-we're updating as we're setting
-    //
-    // Get pending jobs
-    const result = await db.getData(`
-      UPDATE form4_jobs
-      SET status='running'
-      WHERE accession = (
-        SELECT accession FROM form4_jobs
-        WHERE status='pending'
-        LIMIT 1
-      )
-      RETURNING *
-    `);
-
-    if (!result) {
-      console.log('No pending jobs found');
-      return false;
-    }
-
-    const { accession } = result;
-    console.log(`Processing job: ${accession}`);
-    const processingResult = await handleProcessingOfXmlUrls(result);
-
-    if (processingResult.success) {
-      await db.setData(`UPDATE form4_jobs SET status='ingested' WHERE accession = ?`, [accession]);
-      console.log(`Successfully processed job: ${accession}`);
-      return true; // Successfully processed
-    } else {
-
-      // Mark as failed for later retry or manual inspection
-      const status = processingResult.error === "Cannot convert undefined or null to object" ? "broken_link" : "failed";
-      await db.setData(`
-        UPDATE form4_jobs 
-        SET status=${status}, error_message=?, updated_at=CURRENT_TIMESTAMP 
-        WHERE accession = ?`,
-        [JSON.stringify(processingResult.error), accession]
-      );
-      console.error(`Failed to process job: ${accession}, error: ${processingResult.error}`);
-      return true; // Continue processing other jobs despite this failure
-    }
-
-  } catch (error) {
-    console.error('Error in processNextXmlUrl:', error);
-    return false; // Stop processing on unexpected errors
-  }
-}
-
-// Flattens json tree and normalizes possible array values 
-function flattenTree(obj: any, prefix = ''): Record<string, any> {
-
-  const result: Record<string, any> = {};
-
-  for (var [key, value] of Object.entries(obj)) {
-
-    // if last key is value - make it previous key
-    let newKey = prefix;
-    if (key !== 'value') {
-      newKey = key;
-    }
-
-    // Normalize transactions and footnotes to be arrays
-    if (['derivativeTransaction', 'nonDerivativeTransaction', 'nonDerivativeHolding', 'derivativeHolding', 'footnotes'].includes(key)) {
-      // if not array
-      if (!Array.isArray(value)) {
-        value = [value];
-      }
-      // flatten object array
-      result[newKey] = (value as any[]).map((e: any) => flattenTree(e));
-    }
-
-    else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      Object.assign(result, flattenTree(value, newKey));
-    } else {
-      result[newKey] = value;
-    }
-  }
-  return result;
-}
-
 // Reset for failed jobs
 async function reset() {
   await db.setData(`
@@ -225,21 +56,21 @@ async function reset() {
 
 async function runFailedJobs() {
   await reset();
-  const processor = new XmlJobProcessor();
+  const processor = new XmlJobProcessor(db);
   processor.startProcessing();
 }
 
 async function runOrchestrator() {
   // Add found accessions / split into jobs
-  // await initBatchOrchestrator(10);
-  // console.info('Initial ingest complete');
+  await initBatchOrchestrator(20);
+  console.info('Initial ingest complete');
 
   // Process individual accessions/jobs
-  // const processor = new XmlJobProcessor();
-  // await processor.startProcessing();
+  const processor = new XmlJobProcessor(db);
+  await processor.startProcessing();
 
   // Get current moving averages
-  // await getSetMovingAverages(db);
+  await getSetMovingAverages(db);
 
   // ******************** render html ******************** //
   // Find cluster purchase/sales 
@@ -249,7 +80,6 @@ async function runOrchestrator() {
 
   const purchaseClusters = await findClusterPurchases(db, daysWindow, 3);
   const outputPurchaseArray = formatPurchaseOutput(purchaseClusters);
-
   const clusterOutputs: FormatOutput[] = [...outputSalesArray, ...outputPurchaseArray];
 
   // Add cluster html string to the db
@@ -260,9 +90,16 @@ async function runOrchestrator() {
     `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow]));
 
   // Create image
+  await createImages(db);
+}
+
+async function test() {
+  await postImageTwitter(db);
+  console.log("HAS RUN");
 }
 
 
+// test()
 
 // ******************* 1
 // **** Initial run ****
@@ -290,7 +127,6 @@ async function populateOfficerTitleExclusion() {
 
 // ** Populate CIK table
 // insertCiks(db)
-
 
 
 

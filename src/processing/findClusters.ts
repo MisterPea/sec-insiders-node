@@ -5,7 +5,7 @@ import { Database, RawPurchaseOutput, RawSalesOutput } from "../types.js";
  * @param {number} clusterWindow Number of days to look at for clusters
  * @param {number} countThreshold Number of insiders that need to have made purchases
  */
-export async function findClusterPurchases(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<RawPurchaseOutput[]> {
+export async function findClusterPurchases(db: any, clusterWindow: number = 7, countThreshold: number = 2): Promise<RawPurchaseOutput[]> {
   const query = `
       WITH per_owner AS (
         SELECT
@@ -105,7 +105,7 @@ export async function findClusterPurchases(db: Database, clusterWindow: number =
  * @param {number} clusterWindow Number of days to look at for clusters
  * @param {number} countThreshold Number of insiders that need to have made purchases
  */
-export async function findClusterSales(db: Database, clusterWindow: number = 7, countThreshold: number = 2): Promise<RawSalesOutput[]> {
+export async function findClusterSales(db: any, clusterWindow: number = 7, countThreshold: number = 2): Promise<RawSalesOutput[]> {
   const query = `
   WITH aggregated_data AS (
     SELECT 

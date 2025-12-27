@@ -6,7 +6,7 @@ function createDateString(dateObj: Date): string {
   return dateString;
 }
 
-export default async function getSetMovingAverages(db: Database) {
+export default async function getSetMovingAverages(db: any) {
   console.info('Starting get/set moving averages')
   const yf = new YahooFinance();
 

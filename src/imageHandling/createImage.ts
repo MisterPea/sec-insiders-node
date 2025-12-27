@@ -50,7 +50,7 @@ async function _screenshotHtmlToFile(page: puppeteer.Page, htmlString: string, o
   ``;
 }
 
-export async function createImages(db: Database) {
+export async function createImages(db:any) {
   const dir = './images';
   if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
 

@@ -6,3 +6,4 @@ sqlite/sec_data.db
 .env
 src/htmlLayouts/index.html
 images
+.twitter.tokens.json
