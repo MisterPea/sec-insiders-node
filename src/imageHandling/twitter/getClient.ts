@@ -38,14 +38,6 @@ export async function getAuthedClient(): Promise<Client> {
     throw new Error("Missing TWITTER_CLIENT_ID / TWITTER_CLIENT_SECRET / TWITTER_API_REDIRECT_URI");
   }
 
-  const oauth2Config: OAuth2Config = {
-    clientId,
-    clientSecret,
-    redirectUri,
-    scope: ["tweet.write", "tweet.read", "users.read", "offline.access", "media.write"],
-  };
-
-  const oauth2 = new OAuth2(oauth2Config);
   const tokens = await loadTokens();
 
   // If expires_at missing (old token file), synthesize from expires_in and now as best effort
@@ -64,7 +56,15 @@ export async function getAuthedClient(): Promise<Client> {
   // Expired (or close). Refresh.
   if (!tokens.refresh_token) throw new Error("Access token expired and no refresh_token stored.");
 
-  const refreshed: OAuth2Token = await (oauth2 as any).refreshToken(tokens.refresh_token);
+  const tokenData = {
+    clientId,
+    clientSecret,
+    scope: tokens.scope || '',
+    tokenType: tokens.token_type || '',
+    refreshToken: tokens.refresh_token || ''
+  };
+
+  const refreshed = await refreshToken(tokenData);
 
   const now = Date.now();
   const newTokens: LocalToken = {
@@ -78,4 +78,62 @@ export async function getAuthedClient(): Promise<Client> {
 
   await saveTokens(newTokens);
   return new Client({ accessToken: newTokens.access_token });
+}
+
+async function refreshToken({
+  clientId,
+  clientSecret,
+  scope,
+  tokenType,
+  refreshToken }:
+  {
+    clientId: string,
+    clientSecret: string,
+    scope: string,
+    tokenType: string,
+    refreshToken: string;
+  }) {
+
+  const url = "https://api.x.com/2/oauth2/token";
+
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: clientId
+  });
+
+  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${basic}`,
+    },
+    body,
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Token refresh failed ${res.status}: ${text}`);
+
+  const json = JSON.parse(text) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+    token_type?: string;
+  };
+
+  const now = Date.now();
+  const expiresIn = json.expires_in ?? tokens.expires_in ?? 7200;
+
+  return {
+    access_token: json.access_token,
+    refresh_token: json.refresh_token ?? refreshToken, // keep old if not rotated
+    expires_in: expiresIn,
+    expires_at: now + expiresIn * 1000 - EXPIRY_SAFETY_MS,
+    scope: json.scope ?? scope,
+    token_type: json.token_type ?? tokenType,
+  };
+
 }
