@@ -1,5 +1,4 @@
 import YahooFinance from 'yahoo-finance2';
-import { Database } from '../types.js';
 
 function createDateString(dateObj: Date): string {
   const dateString = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;

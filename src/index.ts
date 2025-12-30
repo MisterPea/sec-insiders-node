@@ -10,6 +10,7 @@ import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
 import { postImageTwitter } from "./imageHandling/postImages.js";
+// import "./imageHandling/twitter/authOnce.js" // un-comment to reauth app
 
 const db = new DB();
 
@@ -60,17 +61,21 @@ async function runFailedJobs() {
   processor.startProcessing();
 }
 
+/**
+ * Run Orchestrator is the main organizer for all actions,
+ * running all actions in a stepwise fashion.
+ */
 async function runOrchestrator() {
   // Add found accessions / split into jobs
-  await initBatchOrchestrator(20);
-  console.info('Initial ingest complete');
+  /*   await initBatchOrchestrator(20);
+    console.info('Initial ingest complete'); */
 
   // Process individual accessions/jobs
-  const processor = new XmlJobProcessor(db);
-  await processor.startProcessing();
+  /*   const processor = new XmlJobProcessor(db);
+    await processor.startProcessing(); */
 
   // Get current moving averages
-  await getSetMovingAverages(db);
+  // await getSetMovingAverages(db);
 
   // ******************** render html ******************** //
   // Find cluster purchase/sales 
@@ -80,17 +85,19 @@ async function runOrchestrator() {
 
   const purchaseClusters = await findClusterPurchases(db, daysWindow, 3);
   const outputPurchaseArray = formatPurchaseOutput(purchaseClusters);
+
+  // Collect purchases and sales into one array - pass it to insert
   const clusterOutputs: FormatOutput[] = [...outputSalesArray, ...outputPurchaseArray];
 
   // Add cluster html string to the db
   await db.insertData(`
-    INSERT INTO cluster_post (cluster_id, html_twitter, html_bluesky, accession_urls, generated_at, expiration_date)
-    VALUES (?, ?, ?, ?, DATETIME('now'), DATETIME('now', '+' || ? || ' days'))
+    INSERT INTO cluster_post (cluster_id, html_twitter, html_bluesky, accession_urls, generated_at, expiration_date, ticker, purchase_or_sale)
+    VALUES (?, ?, ?, ?, DATETIME('now'), DATETIME('now', '+' || ? || ' days'), ?, ?)
     ON CONFLICT(cluster_id) DO NOTHING 
-    `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow]));
+    `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions, ticker, purchaseOrSale }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow, ticker, purchaseOrSale]));
 
-  // Create image
-  await createImages(db);
+  // Create images for each clusterId that doesn't have am image crated
+  // await createImages(db);
 }
 
 async function test() {
@@ -103,7 +110,8 @@ async function test() {
 
 // ******************* 1
 // **** Initial run ****
-runOrchestrator();
+// runOrchestrator();
+
 
 
 // ********** Populate officer_title exclusion table ********** //

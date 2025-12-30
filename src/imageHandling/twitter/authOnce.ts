@@ -11,10 +11,11 @@ import {
   type OAuth2Config,
   type OAuth2Token,
 } from "@xdevplatform/xdk";
+import { LocalToken } from "./getClient.js";
 
 const TOKEN_PATH = process.env.TWITTER_TOKEN_PATH ?? "./.twitter.tokens.json";
 
-async function saveTokens(tokens: OAuth2Token) {
+async function saveTokens(tokens: LocalToken) {
   await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2), "utf8");
 }
 
@@ -55,7 +56,7 @@ function waitForAuthCode(redirectUri: string, expectedState: string): Promise<st
       }
     });
 
-    server.listen(port, host, () => {});
+    server.listen(port, host, () => { });
     server.on("error", reject);
   });
 }
@@ -74,7 +75,7 @@ function waitForAuthCode(redirectUri: string, expectedState: string): Promise<st
     clientId,
     clientSecret,
     redirectUri,
-    scope: ["tweet.write", "tweet.read", "users.read", "offline.access"],
+    scope: ["tweet.write", "tweet.read", "users.read", "offline.access", "media.write"],
   };
 
   const oauth2 = new OAuth2(oauth2Config);
@@ -93,8 +94,14 @@ function waitForAuthCode(redirectUri: string, expectedState: string): Promise<st
 
   const authCode = await waitForAuthCode(redirectUri, state);
   const tokens: OAuth2Token = await oauth2.exchangeCode(authCode, codeVerifier);
+  const now = Date.now();
+  const localTokens = {
+    ...tokens,
+    obtained_at: now,
+    expires_at: now + (tokens.expires_in ?? 0) * 1000,
+  };
 
-  await saveTokens(tokens);
+  await saveTokens(localTokens);
 
   console.log("\n✅ Saved OAuth2 tokens to", TOKEN_PATH);
 })();

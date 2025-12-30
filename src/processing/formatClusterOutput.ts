@@ -127,7 +127,7 @@ export function formatSalesOutput(sales: RawSalesOutput[]): FormatOutput[] {
       transactionCode: 'S'
     };
     const clusterId = makeClusterId(clusterInput);
-    outputArray.push({ twitterHtml, blueskyHtml, accessions: JSON.stringify(accessionArray), clusterId });
+    outputArray.push({ twitterHtml, blueskyHtml, accessions: JSON.stringify(accessionArray), clusterId, ticker: singleTicker(tickers), purchaseOrSale: 'S' });
   };
   return outputArray;
 }
@@ -214,7 +214,7 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]): FormatOutp
     };
 
     const clusterId = makeClusterId(clusterInput);
-    outputArray.push({ twitterHtml, blueskyHtml, accessions: JSON.stringify(accessionArray), clusterId });
+    outputArray.push({ twitterHtml, blueskyHtml, accessions: JSON.stringify(accessionArray), clusterId, ticker: singleTicker(tickers), purchaseOrSale: 'P' });
   }
   return outputArray;
 };

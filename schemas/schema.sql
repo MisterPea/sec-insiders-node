@@ -84,3 +84,17 @@ CREATE TABLE
 
 CREATE TABLE
   IF NOT EXISTS excluded_officer_titles (title TEXT PRIMARY KEY);
+
+-- UPDATE cluster_post
+-- SET was_posted_twitter='image_created'
+
+-- ALTER TABLE cluster_post
+-- DROP COLUMN bluesky_attempt;
+
+-- ALTER TABLE cluster_post
+-- DROP COLUMN twitter_attempt;
+
+-- DROP TABLE cluster_post;
+-- UPDATE cluster_post
+-- SET purchase_or_sale = 'P'
+-- WHERE purchase_or_sale = 'purchase'

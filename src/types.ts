@@ -218,6 +218,8 @@ export type FormatOutput = {
   blueskyHtml: string;
   accessions: string;
   clusterId: string;
+  ticker: string;
+  purchaseOrSale: string;
 };
 
 export type ClusterInput = {
