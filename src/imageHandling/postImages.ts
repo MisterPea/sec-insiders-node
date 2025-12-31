@@ -1,7 +1,42 @@
+import { Database } from "../types.js";
 import { replyToTweet, uploadPngAndPost } from "./twitter/post.js";
 import { chunkUrlsForReplies, packAccessionUrls } from "./twitter/postHelpers.js";
 
-export async function postImageTwitter(database: any) {
+/**
+ * Function to handle coordination of posting images - and rate limiting to 17 posts per 24h
+ * @param database Reference to main database
+ */
+export async function postImages(database: Database) {
+  const ALLOWED_TWITTER_ATTEMPTS = 17; // 17 attempts in 24h (86.4M ms)
+  const query = `
+    SELECT cluster_id FROM cluster_post
+    WHERE last_twitter_attempt >= (unixepoch('now') * 1000) - 86400000
+  `;
+  const recentAttempts = await database.getAllData(query);
+
+  let adjustedTwitterAttempts = ALLOWED_TWITTER_ATTEMPTS - recentAttempts.length;
+
+  try {
+    while (adjustedTwitterAttempts > 0) {
+      adjustedTwitterAttempts -= 1;
+
+      const imgPostRtn = await _postImageTwitter(database);
+      if (!imgPostRtn) break;
+
+      console.info(`POSTED:${imgPostRtn}`);
+
+      await _sleep(180_000); // 3 minutes
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function _sleep(ms: number) {
+  return new Promise<void>(res => setTimeout(res, ms));
+}
+
+async function _postImageTwitter(database: any) {
   // Mark db row as in-progress
   const query = `
    UPDATE cluster_post
@@ -13,7 +48,10 @@ export async function postImageTwitter(database: any) {
       )
       RETURNING cluster_id,accession_urls, ticker, purchase_or_sale
   `;
-  const { cluster_id, accession_urls, ticker, purchase_or_sale } = await database.getData(query);
+  const clusterPost = await database.getData(query);
+  if (!clusterPost) return false;
+
+  const { cluster_id, accession_urls, ticker, purchase_or_sale } = clusterPost;
 
   // Set tweet text
   const isPurchOrSale = purchase_or_sale === 'P' ? 'purchases' : 'sales';
