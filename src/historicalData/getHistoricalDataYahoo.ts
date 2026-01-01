@@ -5,6 +5,10 @@ function createDateString(dateObj: Date): string {
   return dateString;
 }
 
+async function _sleep(ms: number) {
+  return new Promise<void>(res => setTimeout(res, ms));
+}
+
 export default async function getSetMovingAverages(db: any) {
   console.info('Starting get/set moving averages')
   const yf = new YahooFinance();
@@ -43,6 +47,8 @@ export default async function getSetMovingAverages(db: any) {
     INSERT OR REPLACE INTO moving_averages 
     (ticker, long_name, short_name, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    await _sleep(1000)
 
     try {
       await db.setData(query, [ticker, longName, shortName, ma20, ma200, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketVolume, endDate]);

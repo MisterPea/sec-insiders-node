@@ -4,12 +4,13 @@ import sp500_cik from "./sp500_CIK.js";
 import { FormatOutput, SecEntity } from "./types.js";
 import { XmlJobProcessor } from './processing/XmlJobProcessor.js';
 import { findClusterPurchases, findClusterSales, findRepeatTransactions } from "./processing/findClusters.js";
-import getSetMovingAverages from "./historicalData/getHistoricalData.js";
+import getSetMovingAverages from "./historicalData/getHistoricalDataYahoo.js";
 import { insertCiks } from "./cikFunctions.js";
 import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
-import { postImageTwitter } from "./imageHandling/postImages.js";
+import { postImages } from "./imageHandling/postImages.js";
+import { getHistoricalData } from "./historicalData/getHistoricalDataMassive.js";
 // import "./imageHandling/twitter/authOnce.js" // un-comment to reauth app
 
 const db = new DB();
@@ -67,15 +68,16 @@ async function runFailedJobs() {
  */
 async function runOrchestrator() {
   // Add found accessions / split into jobs
-  /*   await initBatchOrchestrator(20);
-    console.info('Initial ingest complete'); */
+  await initBatchOrchestrator(20);
+  console.info('Initial ingest complete');
 
   // Process individual accessions/jobs
-  /*   const processor = new XmlJobProcessor(db);
-    await processor.startProcessing(); */
+  const processor = new XmlJobProcessor(db);
+  await processor.startProcessing();
 
   // Get current moving averages
-  // await getSetMovingAverages(db);
+  // await getSetMovingAverages(db); 
+  await getHistoricalData(db)
 
   // ******************** render html ******************** //
   // Find cluster purchase/sales 
@@ -97,20 +99,18 @@ async function runOrchestrator() {
     `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions, ticker, purchaseOrSale }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow, ticker, purchaseOrSale]));
 
   // Create images for each clusterId that doesn't have am image crated
-  // await createImages(db);
+  console.info('-- Creating Images');
+  await createImages(db);
+
+  console.info('-- Starting posts');
+  await postImages(db);
 }
 
-async function test() {
-  await postImageTwitter(db);
-  console.log("HAS RUN");
-}
-
-
-// test()
 
 // ******************* 1
 // **** Initial run ****
-// runOrchestrator();
+runOrchestrator();
+
 
 
 
