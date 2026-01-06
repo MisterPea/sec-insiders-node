@@ -33,7 +33,7 @@ function createDateString(dateObj: Date): string {
   return dateString;
 }
 
-export async function getHistoricalData(database: any) {
+export async function getHistoricalDataMassive(database: any) {
   const SLEEP_AMT = 13000; // 13 sec - only allowed 5 calls a minute
   console.info('Starting get/set moving averages via MASSIVE');
 

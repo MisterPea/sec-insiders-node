@@ -10,7 +10,8 @@ import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
 import { postImages } from "./imageHandling/postImages.js";
-import { getHistoricalData } from "./historicalData/getHistoricalDataMassive.js";
+import { getHistoricalData, getHistoricalDataMassive } from "./historicalData/getHistoricalDataMassive.js";
+import getHistoricalDataYahoo from "./historicalData/getHistoricalDataYahoo.js";
 // import "./imageHandling/twitter/authOnce.js" // un-comment to reauth app
 
 const db = new DB();
@@ -76,8 +77,13 @@ async function runOrchestrator() {
   await processor.startProcessing();
 
   // Get current moving averages
-  // await getSetMovingAverages(db); 
-  await getHistoricalData(db)
+  // If yahoo is not working, then we resort to the much slower MASSIVE feed
+  try {
+    getHistoricalDataYahoo(db);
+  } catch (err) {
+    console.info('ERROR:', err, '--trying fallback');
+    await getHistoricalDataMassive(db);
+  }
 
   // ******************** render html ******************** //
   // Find cluster purchase/sales 
@@ -104,6 +110,7 @@ async function runOrchestrator() {
 
   console.info('-- Starting posts');
   await postImages(db);
+  console.info('-- Posts complete');
 }
 
 

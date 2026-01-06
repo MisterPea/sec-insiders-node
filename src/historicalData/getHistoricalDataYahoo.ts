@@ -9,8 +9,8 @@ async function _sleep(ms: number) {
   return new Promise<void>(res => setTimeout(res, ms));
 }
 
-export default async function getSetMovingAverages(db: any) {
-  console.info('Starting get/set moving averages')
+export default async function getHistoricalDataYahoo(db: any) {
+  console.info('Starting get/set moving averages');
   const yf = new YahooFinance();
 
   // Get list of tickers
@@ -28,9 +28,9 @@ export default async function getSetMovingAverages(db: any) {
 
   for (const ticker of tickers) {
     const simpleTicker = ticker.split(', ')[0];
-    if(!simpleTicker.length) continue;
+    if (!simpleTicker.length) continue;
 
-    console.info(`Processing: ${simpleTicker}`)
+    console.info(`Processing: ${simpleTicker}`);
 
     const tickerData = await yf.chart(simpleTicker, { period1: startDate, period2: endDate, interval: '1d' });
 
@@ -48,7 +48,7 @@ export default async function getSetMovingAverages(db: any) {
     (ticker, long_name, short_name, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    await _sleep(1000)
+    await _sleep(1000);
 
     try {
       await db.setData(query, [ticker, longName, shortName, ma20, ma200, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketVolume, endDate]);
@@ -56,5 +56,5 @@ export default async function getSetMovingAverages(db: any) {
       console.error(`Error adding ticker:${simpleTicker} to database`);
     }
   }
-  console.info('Moving Averages Complete')
+  console.info('Moving Averages Complete');
 }
