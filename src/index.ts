@@ -69,7 +69,7 @@ async function runFailedJobs() {
  */
 async function runOrchestrator() {
   // Add found accessions / split into jobs
-  await initBatchOrchestrator(20);
+  await initBatchOrchestrator(30);
   console.info('Initial ingest complete');
 
   // Process individual accessions/jobs
@@ -77,9 +77,9 @@ async function runOrchestrator() {
   await processor.startProcessing();
 
   // Get current moving averages
-  // If yahoo is not working, then we resort to the much slower MASSIVE feed
+  // // If yahoo is not working, then we resort to the much slower MASSIVE feed
   try {
-    getHistoricalDataYahoo(db);
+    await getHistoricalDataYahoo(db);
   } catch (err) {
     console.info('ERROR:', err, '--trying fallback');
     await getHistoricalDataMassive(db);

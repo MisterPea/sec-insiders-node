@@ -53,8 +53,9 @@ export async function getHistoricalDataMassive(database: any) {
   const startDate = createDateString(now);
 
   for (const ticker of tickers) {
+    const simpleTicker = ticker.split(', ')[0];
     const requestObj: DefaultApiGetStocksSMARequest = {
-      stockTicker: ticker,
+      stockTicker: simpleTicker,
       timespan: GetStocksSMATimespanEnum.Day,
       adjusted: true,
       window: 253,
@@ -106,9 +107,3 @@ export async function getHistoricalDataMassive(database: any) {
     }
   }
 }
-
-
-/* 
-ERRORS ON:
-AKAM,LNT,AMZN,APA,APTV,AJG,BALL,BDX,BX,BSX,BRO,CPB,CRL,CSCO,CME,CL,FANG,DHI,EXC,FAST,FIS,FISV,FTV,GEV,GPN,GDDY,HAL,HSY,HST,HUM,IFF,JCI,KDP,KMB,LDOS,LYB,MTCH,META,MGM,MSFT,MOH,MCO,NFLX,NSC,ORLY,PFE,PGR,PTC,RL,O,REGN,RSG,STX,SHW,SOLV,SBUX,SMCI,SYY,TRMB,TSN,VMC,WEC,WYNN,
-*/
