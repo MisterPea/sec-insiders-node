@@ -10,7 +10,7 @@ import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
 import { postImages } from "./imageHandling/postImages.js";
-import { getHistoricalData, getHistoricalDataMassive } from "./historicalData/getHistoricalDataMassive.js";
+import { getHistoricalDataMassive } from "./historicalData/getHistoricalDataMassive.js";
 import getHistoricalDataYahoo from "./historicalData/getHistoricalDataYahoo.js";
 // import "./imageHandling/twitter/authOnce.js" // un-comment to reauth app
 
@@ -19,18 +19,21 @@ const db = new DB();
 
 async function initBatchOrchestrator(batchSize = 5) {
   const cikArray = sp500_cik;
+  let totalRecordsAdded = 0;
 
   let prevIndex = 0;
   for (let i = batchSize; i < cikArray.length + batchSize; i += batchSize) {
     const currBatch = cikArray.slice(prevIndex, i);
     prevIndex = i;
 
-    await getInitialData(currBatch);
+    const numRecords = await getInitialData(currBatch);
+    totalRecordsAdded += numRecords;
   }
+  return totalRecordsAdded;
 }
 
 async function getInitialData(currBatch: string[]) {
-
+  let numRecordsAdded = 0;
   for (const issuer of currBatch) {
     const accessionArray: string[][] = [];
 
@@ -39,14 +42,18 @@ async function getInitialData(currBatch: string[]) {
     const accessionElement = buildAccessionBase(issuersJson[0]);
     accessionArray.push(...accessionElement);
 
-    await db.insertData(`
+    const { inserted } = await db.insertData(`
     INSERT INTO form4_jobs (cik, accession, url)
     VALUES (?, ?, ?)
     ON CONFLICT(url) DO NOTHING`,
       accessionArray
     );
-    console.log(`${accessionArray.length} jobs inserted into form4_jobs table.`);
+    if (inserted) {
+      numRecordsAdded += inserted;
+      console.log(`${inserted} jobs inserted into form4_jobs table.`);
+    }
   }
+  return numRecordsAdded;
 }
 
 // Reset for failed jobs
@@ -69,8 +76,11 @@ async function runFailedJobs() {
  */
 async function runOrchestrator() {
   // Add found accessions / split into jobs
-  await initBatchOrchestrator(30);
+  const totalRecordsAdded = await initBatchOrchestrator(30);
   console.info('Initial ingest complete');
+
+  // No records added means no additional processing needed.
+  if (totalRecordsAdded === 0) { console.log('No new records found'); return; }
 
   // Process individual accessions/jobs
   const processor = new XmlJobProcessor(db);
@@ -134,7 +144,7 @@ async function populateOfficerTitleExclusion() {
 }
 
 // ** Find repeat, directional discretionary transactions
-// const repeatTransactions = await findRepeatTransactions(db, 21, 5);
+// const repeatTransactions = await findRepeatTransactions(db, 21, 3);
 // console.log(repeatTransactions);
 
 // ** Run failed jobs

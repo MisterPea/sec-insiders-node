@@ -33,13 +33,16 @@ parentPort.on( 'message', async ( message ) => {
       stmt.bind( ...params ).run();
       result = { set: params.length };
     } else if ( type === 'insert' ) {
+      let recordsInserted = 0;
       const insertMany = db.transaction( ( rows ) => {
         for ( const paramSet of rows ) {
-          stmt.run( ...paramSet );
+          const rows = stmt.run( ...paramSet );
+          // keep track of num row inserted per iteration
+          recordsInserted += rows.changes;
         }
       } );
       insertMany( params );
-      result = { inserted: params.length };
+      result = { inserted: recordsInserted };
     }
 
     parentPort.postMessage( { id, result } );
