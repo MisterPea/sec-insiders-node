@@ -5,6 +5,24 @@ function createDateString(dateObj: Date): string {
   return dateString;
 }
 
+// Progressive retry function 
+async function getTickerData(yFin: any, simpleTicker: string, startDate: string, endDate: string, retriesAvailable = 3, sleepMs = 1000) {
+
+  try {
+    const tickerData = await yFin.chart(simpleTicker, { period1: startDate, period2: endDate, interval: '1d' });
+    return tickerData;
+
+  } catch (err) {
+    if (retriesAvailable > 0) {
+      await _sleep(sleepMs);
+      getTickerData(yFin, simpleTicker, startDate, endDate, retriesAvailable - 1, sleepMs * 1.5);
+    } else {
+      // though this grenades the entire function — after 4 retries, something is wrong
+      return false;
+    }
+  }
+}
+
 async function _sleep(ms: number) {
   return new Promise<void>(res => setTimeout(res, ms));
 }
@@ -32,7 +50,8 @@ export default async function getHistoricalDataYahoo(db: any) {
 
     console.info(`Processing: ${simpleTicker}`);
 
-    const tickerData = await yf.chart(simpleTicker, { period1: startDate, period2: endDate, interval: '1d' });
+    const tickerData = await getTickerData(yf, simpleTicker, startDate, endDate);
+    if (!tickerData) throw new Error(`Failure retrieving:${simpleTicker} ticker`);
 
     const { quotes, meta } = tickerData;
     const { regularMarketVolume, fiftyTwoWeekHigh, fiftyTwoWeekLow, longName, shortName } = meta;
@@ -48,7 +67,7 @@ export default async function getHistoricalDataYahoo(db: any) {
     (ticker, long_name, short_name, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    await _sleep(1000);
+    await _sleep(500);
 
     try {
       await db.setData(query, [ticker, longName, shortName, ma20, ma200, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketVolume, endDate]);
