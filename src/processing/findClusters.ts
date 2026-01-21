@@ -189,6 +189,7 @@ export async function findRepeatTransactions(db: Database, clusterWindow: number
           i.company_name,
           t.transaction_code,
           t.owner_name,
+          t.officer_title,
           COUNT(DISTINCT t.accession) AS tot_transactions,
           MIN(t.transaction_date) AS first_transaction,
           MAX(t.transaction_date) AS last_transaction,
