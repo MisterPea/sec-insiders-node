@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import process from "process";
 process.loadEnvFile(".env");
 
-import { Client, OAuth2, type OAuth2Config, type OAuth2Token } from "@xdevplatform/xdk";
+import { Client, type OAuth2Token } from "@xdevplatform/xdk";
 
 export type LocalToken = OAuth2Token & {
   // epoch ms
@@ -135,5 +135,4 @@ async function refreshToken({
     scope: json.scope ?? scope,
     token_type: json.token_type ?? tokenType,
   };
-
 }

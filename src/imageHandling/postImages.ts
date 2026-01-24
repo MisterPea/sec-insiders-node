@@ -1,12 +1,20 @@
 import { Database } from "../types.js";
-import { replyToTweet, uploadPngAndPost } from "./twitter/post.js";
-import { chunkUrlsForReplies, packAccessionUrls } from "./twitter/postHelpers.js";
+import { replyToTweet, uploadPngAndPostTwitter } from "./twitter/post.js";
+import { chunkUrlsForReplies, packAccessionUrls } from "./postHelpers.js";
+import { replyToPostBluesky, uploadPngAndPostBluesky } from "./bluesky/post.js";
 
 /**
  * Function to handle coordination of posting images - and rate limiting to 17 posts per 24h
  * @param database Reference to main database
  */
 export async function postImages(database: Database) {
+  const p1 = postToTwitter(database);
+  const p2 = postToBluesky(database);
+  const [r1, r2] = await Promise.all([p1, p2]);
+  return { r1, r2 };
+}
+
+async function postToTwitter(database: Database) {
   const ALLOWED_TWITTER_ATTEMPTS = 17; // 17 attempts in 24h (86.4M ms)
   const query = `
     SELECT cluster_id FROM cluster_post
@@ -32,6 +40,27 @@ export async function postImages(database: Database) {
   }
 }
 
+async function postToBluesky(database: Database) {
+  // Bluesky doesn't have a upper limit for posts in a 24 hour period for us to 
+  // contend with, so we son't have to keep track of posts per time-period
+
+  try {
+    while (true) {
+      const blueskyReturn = await _postImageBluesky(database);
+      if (!blueskyReturn) break;
+
+      console.info(`POSTED::BLUESKY-${blueskyReturn}`);
+
+      await _sleep(180_000); // 3 minutes
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+
+
 async function _sleep(ms: number) {
   return new Promise<void>(res => setTimeout(res, ms));
 }
@@ -46,7 +75,7 @@ async function _postImageTwitter(database: any) {
         WHERE was_posted_twitter = 'image_created'
         LIMIT 1
       )
-      RETURNING cluster_id,accession_urls, ticker, purchase_or_sale
+      RETURNING cluster_id, accession_urls, ticker, purchase_or_sale
   `;
   const clusterPost = await database.getData(query);
   if (!clusterPost) return false;
@@ -61,7 +90,7 @@ async function _postImageTwitter(database: any) {
   // If we have too much, save for overflow for successive replies
   const { mainText, overflow } = packAccessionUrls({ header, urls: accessionArray });
 
-  const { tweetId } = await uploadPngAndPost({ clusterId: cluster_id, text: mainText });
+  const { tweetId } = await uploadPngAndPostTwitter({ clusterId: cluster_id, text: mainText });
 
   if (overflow.length) {
     const replyChunks = chunkUrlsForReplies(overflow);
@@ -92,4 +121,52 @@ async function _postImageTwitter(database: any) {
   return tweetId;
 }
 
-export function postImageBluesky() { }
+export async function _postImageBluesky(database: Database) {
+  // Mark db row as in-progress
+  const query = `
+   UPDATE cluster_post
+      SET was_posted_bluesky = 'posting_image', last_bluesky_attempt = unixepoch('now') * 1000
+      WHERE cluster_id = (
+        SELECT cluster_id FROM cluster_post
+        WHERE was_posted_bluesky = 'image_created'
+        LIMIT 1
+      )
+      RETURNING cluster_id, accession_urls, ticker, purchase_or_sale
+  `;
+  const clusterPost = await database.getData(query);
+  if (!clusterPost) return false;
+
+  const { cluster_id, accession_urls, ticker, purchase_or_sale } = clusterPost;
+
+  // Set post text
+  const isPurchOrSale = purchase_or_sale === 'P' ? 'purchases' : 'sales';
+  const headerText = `Insider ${isPurchOrSale} for (${ticker})`;
+  const accessionArray = JSON.parse(accession_urls);
+
+  // If we have too much, save for overflow for successive replies
+  const { mainText, overflow, mainLinks, overflowLinks } = packAccessionUrls({ header: headerText, urls: accessionArray, isBluesky: true });
+
+  const response = await uploadPngAndPostBluesky({ clusterId: cluster_id, headerText, mainText, mainLinks });
+
+  // Overflow links
+  if (overflowLinks.length && response && response.hasOwnProperty('uri') && response.hasOwnProperty('cid')) {
+    await replyToPostBluesky(response, overflowLinks);
+  }
+
+  if (response) {
+    const successQuery = `
+      UPDATE cluster_post
+      SET was_posted_bluesky = 'success - id:' || ?
+      WHERE was_posted_bluesky = 'posting_image' AND cluster_id = ?
+    `;
+    await database.setData(successQuery, [[JSON.stringify(response.cid), cluster_id]]);
+  } else {
+    const failQuery = `
+      UPDATE cluster_post
+      SET was_posted_bluesky = 'failed'
+      WHERE was_posted_bluesky = 'posting_image' AND cluster_id = ?
+    `;
+    await database.setData(failQuery, [[cluster_id]]);
+  }
+  return response ? JSON.stringify(response.cid) : false;
+}

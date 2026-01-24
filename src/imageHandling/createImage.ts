@@ -50,9 +50,8 @@ async function _screenshotHtmlToFile(page: puppeteer.Page, htmlString: string, o
 
   await page.screenshot({
     path: outputPath,
-    type: 'webp',
-    omitBackground: false,
-    quality: 90,
+    type: 'png',
+    omitBackground: false
   });
 }
 
@@ -72,8 +71,8 @@ export async function createImages(db: any) {
       const { cluster_id, html_twitter, html_bluesky, was_posted_twitter, was_posted_bluesky } = record;
       console.info(`Creating images for cluster_id:${cluster_id}`);
 
-      const twitterPath = path.join(dir, `${cluster_id}_twitter.webp`);
-      const blueskyPath = path.join(dir, `${cluster_id}_bluesky.webp`);
+      const twitterPath = path.join(dir, `${cluster_id}_twitter.png`);
+      const blueskyPath = path.join(dir, `${cluster_id}_bluesky.png`);
 
       // Twitter
       if (was_posted_twitter === 'processing_image') { // processing_image === no image yet
