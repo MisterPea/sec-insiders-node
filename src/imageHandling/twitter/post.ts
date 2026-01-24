@@ -26,10 +26,6 @@ async function postTweetRaw(accessToken: string, body: any) {
 }
 
 export async function postTweet(text: string): Promise<string> {
-  // const client: any = await getAuthedClient();
-  // // xdk Client stores token; common pattern is client.config.accessToken
-  // const accessToken = client?.config?.accessToken ?? client?.accessToken;
-  // if (!accessToken) throw new Error("Could not locate accessToken on Client");
   const accessToken = await _getAccessToken();
 
   const data = await postTweetRaw(accessToken, { text });
@@ -37,9 +33,6 @@ export async function postTweet(text: string): Promise<string> {
 }
 
 export async function replyToTweet(parentId: string, text: string): Promise<string> {
-  // const client: any = await getAuthedClient();
-  // const accessToken = client?.config?.accessToken ?? client?.accessToken;
-  // if (!accessToken) throw new Error("Could not locate accessToken on Client");
   const accessToken = await _getAccessToken();
 
   const data = await postTweetRaw(accessToken, {
@@ -50,11 +43,8 @@ export async function replyToTweet(parentId: string, text: string): Promise<stri
   return data.data.id as string;
 }
 
-
 ///// - Png upload
-
 type InitResp = { data: { id: string; }; };
-type FinalizeResp = { data?: { id: string; processing_info?: { state: string; check_after_secs?: number; }; }; };
 
 async function initUpload(accessToken: string, totalBytes: number, mimeType: string) {
   const res = await fetch("https://api.x.com/2/media/upload/initialize", {
@@ -121,15 +111,7 @@ async function postTweetWithMedia(accessToken: string, text: string, mediaId: st
   return JSON.parse(body).data.id as string;
 }
 
-export async function uploadPngAndPost({
-  // accessToken,
-  clusterId,
-  text = "",
-}: {
-  // accessToken: string;
-  clusterId: string;
-  text?: string;
-}) {
+export async function uploadPngAndPostTwitter({ clusterId, text = "" }: { clusterId: string; text?: string; }) {
   const accessToken = await _getAccessToken();
   const imgPath = path.join(process.cwd(), "images", `${clusterId}_twitter.png`);
   const fileBuf = await fs.readFile(imgPath);
