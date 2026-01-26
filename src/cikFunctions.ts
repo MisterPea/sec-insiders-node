@@ -1,8 +1,8 @@
-import { SecEntity } from "./types.js";
+import { Database, SecEntity } from "./types.js";
 import { getCikData } from './pipeline.js';
 import ciks from './sp500_CIK.js';
 
-export async function insertCiks(db: any, batchSize = 10) {
+export async function insertCiks(db: Database, batchSize = 10) {
   // clear previous table
   console.info('Clearing previous table: issuers');
   await db.setData(`DELETE FROM issuers`, []);

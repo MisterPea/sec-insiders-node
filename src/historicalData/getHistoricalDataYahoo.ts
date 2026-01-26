@@ -17,7 +17,8 @@ async function getTickerData(yFin: any, simpleTicker: string, startDate: string,
       await _sleep(sleepMs);
       getTickerData(yFin, simpleTicker, startDate, endDate, retriesAvailable - 1, sleepMs * 1.5);
     } else {
-      // though this grenades the entire function — after 4 retries, something is wrong
+      // though this grenades the entire function—after 4 retries, something is wrong
+      console.error("YAHOO-ERROR:", err);
       return false;
     }
   }
@@ -72,7 +73,7 @@ export default async function getHistoricalDataYahoo(db: any) {
     try {
       await db.setData(query, [ticker, longName, shortName, ma20, ma200, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketVolume, endDate]);
     } catch (err) {
-      console.error(`Error adding ticker:${simpleTicker} to database`);
+      console.error(`Error adding ticker:${simpleTicker} to database - Error${err}`);
     }
   }
   console.info('Moving Averages Complete');

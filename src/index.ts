@@ -3,10 +3,8 @@ import { buildAccessionBase, getCikData } from "./pipeline.js";
 import sp500_cik from "./sp500_CIK.js";
 import { FormatOutput, SecEntity } from "./types.js";
 import { XmlJobProcessor } from './processing/XmlJobProcessor.js';
-import { findClusterPurchases, findClusterSales, findRepeatTransactions } from "./processing/findClusters.js";
-import getSetMovingAverages from "./historicalData/getHistoricalDataYahoo.js";
-import { insertCiks } from "./cikFunctions.js";
-import { officerTitles } from './officerTitleExclusion.js';
+import { findClusterPurchases, findClusterSales} from "./processing/findClusters.js";
+// import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
 import { postImages } from "./imageHandling/postImages.js";
@@ -57,18 +55,18 @@ async function getInitialData(currBatch: string[]) {
 }
 
 // Reset for failed jobs
-async function reset() {
-  await db.setData(`
-  UPDATE form4_jobs
-  SET status = 'pending'
-  WHERE status = 'running'`, []);
-}
+// async function reset() {
+//   await db.setData(`
+//   UPDATE form4_jobs
+//   SET status = 'pending'
+//   WHERE status = 'running'`, []);
+// }
 
-async function runFailedJobs() {
-  await reset();
-  const processor = new XmlJobProcessor(db);
-  processor.startProcessing();
-}
+// async function runFailedJobs() {
+//   await reset();
+//   const processor = new XmlJobProcessor(db);
+//   processor.startProcessing();
+// }
 
 /**
  * Run Orchestrator is the main organizer for all actions,
@@ -133,15 +131,15 @@ runOrchestrator();
 
 // ********** Populate officer_title exclusion table ********** //
 // ** Table is used to filter titles from inclusion with sales pull
-async function populateOfficerTitleExclusion() {
-  await db.setData(`DELETE FROM excluded_officer_titles`, []);
-  await db.insertData(`
-    INSERT INTO excluded_officer_titles (title) 
-    VALUES (?)
-    ON CONFLICT(title) DO NOTHING;`,
-    officerTitles.map((t) => [t])
-  );
-}
+// async function populateOfficerTitleExclusion() {
+//   await db.setData(`DELETE FROM excluded_officer_titles`, []);
+//   await db.insertData(`
+//     INSERT INTO excluded_officer_titles (title) 
+//     VALUES (?)
+//     ON CONFLICT(title) DO NOTHING;`,
+//     officerTitles.map((t) => [t])
+//   );
+// }
 
 // ** Find repeat, directional discretionary transactions
 // const repeatTransactions = await findRepeatTransactions(db, 21, 3);

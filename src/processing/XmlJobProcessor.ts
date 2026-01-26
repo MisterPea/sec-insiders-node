@@ -149,7 +149,10 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
 
   const result: Record<string, any> = {};
 
-  for (var [key, value] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries(obj)) {
+
+    // not proud of this - assigning k/v with let would be better but throws linting error.
+    let mutableValue = value;
 
     // if last key is value - make it previous key
     let newKey = prefix;
@@ -161,16 +164,16 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
     if (['derivativeTransaction', 'nonDerivativeTransaction', 'nonDerivativeHolding', 'derivativeHolding', 'footnotes'].includes(key)) {
       // if not array
       if (!Array.isArray(value)) {
-        value = [value];
+        mutableValue = [mutableValue];
       }
       // flatten object array
-      result[newKey] = (value as any[]).map((e: any) => flattenTree(e));
+      result[newKey] = (mutableValue as any[]).map((e: any) => flattenTree(e));
     }
 
-    else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      Object.assign(result, flattenTree(value, newKey));
+    else if (mutableValue !== null && typeof mutableValue === 'object' && !Array.isArray(mutableValue)) {
+      Object.assign(result, flattenTree(mutableValue, newKey));
     } else {
-      result[newKey] = value;
+      result[newKey] = mutableValue;
     }
   }
   return result;

@@ -3,11 +3,9 @@ import {
   DefaultApiGetStocksSMARequest,
   GetStocksSMATimespanEnum,
   GetStocksSMASeriesTypeEnum,
-  GetStocksAggregates200Response,
   GetStocksSMAOrderEnum
 
 } from '@massive.com/client-js';
-
 
 process.loadEnvFile(".env");
 const massiveApiKey = process.env.MASSIVE_API_KEY;

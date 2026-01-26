@@ -47,9 +47,8 @@ parentPort.on( 'message', async ( message ) => {
 
     parentPort.postMessage( { id, result } );
   } catch ( error ) {
-    console.error( 'SQLite bind error:', error.message );
-    console.error( 'Params:', params );
-    // console.error( 'Param types:', Object.entries( params ).map( ( [k, v] ) => [k, typeof v, v] ) );
+    // console.error( 'SQLite bind error:', error.message );
+    // console.error( 'Params:', params );
     parentPort.postMessage( { id, error: error.message } );
   }
 } );

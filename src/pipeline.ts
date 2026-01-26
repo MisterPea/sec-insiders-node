@@ -1,5 +1,5 @@
 import { apiRequest } from "./httpRequest.js";
-import { AccessionBase, SecEntity } from "./types.js";
+import { SecEntity } from "./types.js";
 
 // Initial call to get company data
 export async function getCikData(ciks: string[]): Promise<SecEntity[]> {

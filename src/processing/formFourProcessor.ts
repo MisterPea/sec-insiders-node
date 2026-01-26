@@ -53,7 +53,7 @@ export default function formFourProcessor(flatJson: Form4Parsed) {
   let flatNotes = null;
   if (Array.isArray(footnotes)) {
     const footnoteArray: { footnote: any; } = footnotes[0];
-    if (typeof footnoteArray === 'object' && footnoteArray.hasOwnProperty('footnote')) {
+    if (typeof footnoteArray === 'object' && Object.prototype.hasOwnProperty.call(footnoteArray, 'footnote')) {
       flatNotes = Array.isArray(footnoteArray.footnote) ? footnoteArray.footnote.join(' --- ') : footnoteArray.footnote;
     }
   }
@@ -152,7 +152,7 @@ function processDerivNonDeriv(
       transactionShares,
       transactionAcquiredDisposedCode,
       exerciseDate,
-      expirationDate,
+      // expirationDate,
       underlyingSecurityTitle,
       underlyingSecurityShares,
       sharesOwnedFollowingTransaction,
@@ -240,7 +240,7 @@ function processDerivNonDeriv(
       securityTitle,
       conversionOrExercisePrice,
       exerciseDate,
-      expirationDate,
+      // expirationDate,
       underlyingSecurityTitle,
       underlyingSecurityShares,
       sharesOwnedFollowingTransaction,

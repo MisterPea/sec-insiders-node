@@ -144,12 +144,16 @@ export async function _postImageBluesky(database: Database) {
   const accessionArray = JSON.parse(accession_urls);
 
   // If we have too much, save for overflow for successive replies
-  const { mainText, overflow, mainLinks, overflowLinks } = packAccessionUrls({ header: headerText, urls: accessionArray, isBluesky: true });
+  const { mainText, mainLinks, overflowLinks } = packAccessionUrls({ header: headerText, urls: accessionArray, isBluesky: true });
 
   const response = await uploadPngAndPostBluesky({ clusterId: cluster_id, headerText, mainText, mainLinks });
 
   // Overflow links
-  if (overflowLinks.length && response && response.hasOwnProperty('uri') && response.hasOwnProperty('cid')) {
+  if (overflowLinks.length
+    && response
+    && Object.prototype.hasOwnProperty.call(response, 'uri')
+    && Object.prototype.hasOwnProperty.call(response, 'cid')
+  ) {
     await replyToPostBluesky(response, overflowLinks);
   }
 

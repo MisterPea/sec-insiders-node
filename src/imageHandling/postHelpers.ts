@@ -1,5 +1,3 @@
-import { ucs2 } from "node:punycode";
-
 const MAX_CHARS = 280;
 let URL_COST = 23;      // each URL counts as 23 chars on X
 const SEP_COST = 1;       // newline between URLs
@@ -37,7 +35,7 @@ export function packAccessionUrls({ header, urls, isBluesky = false }: PackInput
   const BLUESKY_LINK = 'sec.gov/Archives/edgar...';
 
 
-  for (var u of urls) {
+  for (let u of urls) {
     const cost = (included.length ? SEP_COST : 0) + URL_COST;
     if (remaining - cost >= 0) {
       mainLinks.push(u);

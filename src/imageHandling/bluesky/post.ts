@@ -43,7 +43,7 @@ async function saveSession(session: AtpSessionData) {
 }
 
 async function clearSessionFile() {
-  try { await unlink(TOKEN_FILE); } catch { }
+  try { await unlink(TOKEN_FILE); } catch {console.warn('No Bluesky TOKEN_FILE') }
 }
 
 const authMutex = new Mutex();
@@ -108,7 +108,7 @@ export async function uploadPngAndPostBluesky({ clusterId, headerText = '', main
 
   // Format facet array
   for (const link of mainLinks) {
-    let endIndex = startIndex + 25; // offset for "sec.gov/Archives/edgar...\n"
+    const endIndex = startIndex + 25; // offset for "sec.gov/Archives/edgar...\n"
     facets.push({
       index: { byteStart: startIndex, byteEnd: endIndex },
       features: [{ $type: 'app.bsky.richtext.facet#link', uri: link }]
@@ -146,7 +146,7 @@ export async function replyToPostBluesky(parent: { uri: string, cid: string; }, 
   let startIndex = 0;
 
   for (const link of overflow) {
-    let endIndex = startIndex + 25;
+    const endIndex = startIndex + 25;
     replyText += 'sec.gov/Archives/edgar...\n';
     facets.push({
       index: { byteStart: startIndex, byteEnd: endIndex },

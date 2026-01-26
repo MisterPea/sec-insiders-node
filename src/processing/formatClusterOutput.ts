@@ -246,10 +246,10 @@ function createHtmlString(documentInfo: HtmlStringData, isPurchase: boolean = fa
   const aOrAn = [8, 11, 18].includes(windowSize) ? 'an' : 'a';
 
   const doc = (() => {
-    var title = 'SALES ACTIVITY:';
-    var purchaseSold = 'sold';
-    var buyerSeller = 'sellers';
-    var amtOfHoldings = `<p>These sales account for <span class="accent">${pctOfHoldings}</span> of their collective holdings.</p>`;
+    let title = 'SALES ACTIVITY:';
+    let purchaseSold = 'sold';
+    let buyerSeller = 'sellers';
+    let amtOfHoldings = `<p>These sales account for <span class="accent">${pctOfHoldings}</span> of their collective holdings.</p>`;
     if (isPurchase) {
       title = 'PURCHASE ACTIVITY:';
       purchaseSold = 'purchased';
