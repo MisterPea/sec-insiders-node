@@ -15,11 +15,19 @@ db.pragma( 'synchronous = NORMAL' );
 db.pragma( 'busy_timeout = 3000' );
 
 // Init schema
-const schema = fs.readFileSync( path.join( __dirname, '../../schemas/schema.sql' ), 'utf-8' );
-db.exec( schema );
+// const schema = fs.readFileSync( path.join( __dirname, '../../schemas/schema.sql' ), 'utf-8' );
+// db.exec( schema );
 
 parentPort.on( 'message', async ( message ) => {
   const { id, type, sql, params } = message;
+
+  if ( type === 'shutdown' ) {
+    db.close();              // closes better-sqlite3
+    parentPort.postMessage( { id, result: 'ok' } );
+    parentPort.close();      // stop the message port
+    return;                  // let the worker exit naturally
+  }
+
   try {
     const stmt = db.prepare( sql );
     let result;

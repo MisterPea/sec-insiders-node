@@ -3,7 +3,7 @@ import { buildAccessionBase, getCikData } from "./pipeline.js";
 import sp500_cik from "./sp500_CIK.js";
 import { FormatOutput, SecEntity } from "./types.js";
 import { XmlJobProcessor } from './processing/XmlJobProcessor.js';
-import { findClusterPurchases, findClusterSales} from "./processing/findClusters.js";
+import { findClusterPurchases, findClusterSales } from "./processing/findClusters.js";
 // import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
@@ -78,7 +78,17 @@ async function runOrchestrator() {
   console.info('Initial ingest complete');
 
   // No records added means no additional processing needed.
-  if (totalRecordsAdded === 0) { console.log('No new records found'); return; }
+  if (totalRecordsAdded === 0) {
+    console.log('No new records found');
+
+    console.log('SHUTTING DOWN');
+    await db.shutdown();
+    console.log('REMOVING WORKER VIA TERMINATE');
+    await db.worker.terminate();
+    console.log('SHUTDOWN-WORKER REMOVED');
+    debugClose();
+    return;
+  }
 
   // Process individual accessions/jobs
   const processor = new XmlJobProcessor(db);
@@ -119,8 +129,26 @@ async function runOrchestrator() {
   console.info('-- Starting posts');
   await postImages(db);
   console.info('-- Posts complete');
+
+  console.log('SHUTTING DOWN');
+  await db.shutdown();
+  console.log('REMOVING WORKER VIA TERMINATE');
+  await db.worker.terminate();
+  console.log('SHUTDOWN-WORKER REMOVED');
+  debugClose();
+  return;
 }
 
+function debugClose() {
+  process.stdin.unref();
+  process.stdout.unref();
+  process.stderr.unref();
+  const handles = process._getActiveHandles();
+  const processes = process._getActiveRequests();
+  console.log("PROCESSES:", processes);
+  console.log("HANDLES:", handles);
+  process.exit();
+}
 
 // ******************* 1
 // **** Initial run ****
