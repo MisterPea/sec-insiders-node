@@ -1,8 +1,8 @@
 import { parentPort } from 'worker_threads';
 import Database from 'better-sqlite3';
 import path, { dirname } from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
+import fs from 'node:fs';
 
 const __filename = fileURLToPath( import.meta.url );
 const __dirname = dirname( __filename );
@@ -15,8 +15,8 @@ db.pragma( 'synchronous = NORMAL' );
 db.pragma( 'busy_timeout = 3000' );
 
 // Init schema
-// const schema = fs.readFileSync( path.join( __dirname, '../../schemas/schema.sql' ), 'utf-8' );
-// db.exec( schema );
+const schema = fs.readFileSync( path.join( __dirname, '../../schemas/schema.sql' ), 'utf-8' );
+db.exec( schema );
 
 parentPort.on( 'message', async ( message ) => {
   const { id, type, sql, params } = message;

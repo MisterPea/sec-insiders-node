@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx --env-file=.env watch src/index.ts",
     "build": "tsc",
+    "start": "node --env-file=.env dist/index.js",
     "lint": "npx eslint ."
   },
   "keywords": [],

@@ -2,7 +2,6 @@ import http from "node:http";
 import { URL } from "node:url";
 import fs from "node:fs/promises";
 import process from "process";
-process.loadEnvFile(".env");
 
 import {
   OAuth2,
@@ -13,7 +12,7 @@ import {
 } from "@xdevplatform/xdk";
 import { LocalToken } from "./getClient.js";
 
-const TOKEN_PATH = process.env.TWITTER_TOKEN_PATH ?? "./.twitter.tokens.json";
+const TOKEN_PATH = "secrets/.twitter.tokens.json";
 
 async function saveTokens(tokens: LocalToken) {
   await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2), "utf8");

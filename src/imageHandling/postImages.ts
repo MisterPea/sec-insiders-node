@@ -7,7 +7,7 @@ import { replyToPostBluesky, uploadPngAndPostBluesky } from "./bluesky/post.js";
  * Function to handle coordination of posting images - and rate limiting to 17 posts per 24h
  * @param database Reference to main database
  */
-export async function postImages(database: Database) {
+export async function postImages(database: any) {
   const p1 = postToTwitter(database);
   const p2 = postToBluesky(database);
   const [r1, r2] = await Promise.all([p1, p2]);

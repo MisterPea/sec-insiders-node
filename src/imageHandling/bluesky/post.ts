@@ -3,7 +3,7 @@ import { readFile, writeFile, unlink } from "node:fs/promises";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const TOKEN_FILE = ".bluesky.tokens.json";
+const TOKEN_FILE = "secrets/.bluesky.tokens.json";
 
 type StoredSession = {
   // shape is whatever agent.session returns in your @atproto/api version,

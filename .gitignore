@@ -11,3 +11,7 @@ dist
 
 .twitter.tokens.json
 .bluesky.tokens.json
+launchd.err.log
+launchd.out.log
+launch_agents/com.mothership.secform4.plist
+launch_agents/scripts_to_add_agent.sh

@@ -58,10 +58,10 @@ export default async function getHistoricalDataYahoo(db: any) {
     const { regularMarketVolume, fiftyTwoWeekHigh, fiftyTwoWeekLow, longName, shortName } = meta;
 
     const quotesLast200 = (quotes ?? []).slice(-200);
-    const ma200 = (quotesLast200.reduce((acc, curr) => acc + (curr?.adjclose ?? 0), 0) / 200).toFixed(2);
+    const ma200 = (quotesLast200.reduce((acc: number, curr: any) => acc + (curr?.adjclose ?? 0), 0) / 200).toFixed(2);
 
     const quotesLast20 = quotes.slice(-20);
-    const ma20 = (quotesLast20.reduce((acc, curr) => acc + (curr?.adjclose ?? 0), 0) / 20).toFixed(2);
+    const ma20 = (quotesLast20.reduce((acc: number, curr: any) => acc + (curr?.adjclose ?? 0), 0) / 20).toFixed(2);
 
     const query = `
     INSERT OR REPLACE INTO moving_averages 

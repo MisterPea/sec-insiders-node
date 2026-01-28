@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import process from "process";
-process.loadEnvFile(".env");
 
 import { Client, type OAuth2Token } from "@xdevplatform/xdk";
 
@@ -11,7 +10,7 @@ export type LocalToken = OAuth2Token & {
   obtained_at?: number;
 };
 
-const TOKEN_PATH = process.env.TWITTER_TOKEN_PATH ?? "./.twitter.tokens.json";
+const TOKEN_PATH = "secrets/.twitter.tokens.json";
 const EXPIRY_SAFETY_MS = 60_000;
 
 async function loadTokens(): Promise<LocalToken> {
@@ -125,7 +124,7 @@ async function refreshToken({
   };
 
   const now = Date.now();
-  const expiresIn = json.expires_in ?? tokens.expires_in ?? 7200;
+  const expiresIn = json.expires_in ?? 7200;
 
   return {
     access_token: json.access_token,

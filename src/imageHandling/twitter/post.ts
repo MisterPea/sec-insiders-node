@@ -68,7 +68,7 @@ async function initUpload(accessToken: string, totalBytes: number, mimeType: str
 async function appendUpload(accessToken: string, mediaId: string, fileBuf: Buffer) {
   const form = new FormData();
   // docs show either JSON(base64) or multipart; multipart file is simplest
-  form.append("media", new Blob([fileBuf]), "image.png");
+  form.append("media", new Blob([fileBuf as any]), "image.png");
   form.append("segment_index", "0");
 
   const res = await fetch(`https://api.x.com/2/media/upload/${mediaId}/append`, {

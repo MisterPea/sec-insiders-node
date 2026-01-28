@@ -59,7 +59,10 @@ export async function createImages(db: any) {
   const dir = './images';
   if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
 
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, // /usr/bin/chromium
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
   const page = await browser.newPage();
 
   try {

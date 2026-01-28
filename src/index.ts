@@ -143,8 +143,8 @@ function debugClose() {
   process.stdin.unref();
   process.stdout.unref();
   process.stderr.unref();
-  const handles = process._getActiveHandles();
-  const processes = process._getActiveRequests();
+  const handles = (process as any)._getActiveHandles();
+  const processes = (process as any)._getActiveRequests();
   console.log("PROCESSES:", processes);
   console.log("HANDLES:", handles);
   process.exit();

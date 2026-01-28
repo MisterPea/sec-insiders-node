@@ -1,0 +1,17 @@
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sec-form4:local
+    environment:
+      NODE_ENV: production
+      TZ: America/New_York
+    env_file:
+      - ./.env
+    volumes:
+      - ./secrets:/app/secrets
+      - ./sqlite:/app/sqlite
+      - ./images:/app/images
+    command: ["node", "dist/index.js"]
+    restart: "no"

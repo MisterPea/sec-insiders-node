@@ -7,7 +7,6 @@ import {
 
 } from '@massive.com/client-js';
 
-process.loadEnvFile(".env");
 const massiveApiKey = process.env.MASSIVE_API_KEY;
 
 type Agg = {
@@ -94,7 +93,7 @@ export async function getHistoricalDataMassive(database: any) {
 
 
     } catch (err) {
-      if (err?.status === 429) {
+      if ((err as any)?.status === 429) {
         await _sleep(60000); // or parse Retry-After header if available
         console.error('429 WAIT', err);
       } else {
