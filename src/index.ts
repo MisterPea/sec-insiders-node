@@ -4,18 +4,25 @@ import sp500_cik from "./sp500_CIK.js";
 import { FormatOutput, SecEntity } from "./types.js";
 import { XmlJobProcessor } from './processing/XmlJobProcessor.js';
 import { findClusterPurchases, findClusterSales } from "./processing/findClusters.js";
-// import { officerTitles } from './officerTitleExclusion.js';
 import { formatPurchaseOutput, formatSalesOutput } from "./processing/formatClusterOutput.js";
 import { createImages } from './imageHandling/createImage.js';
 import { postImages } from "./imageHandling/postImages.js";
 import { getHistoricalDataMassive } from "./historicalData/getHistoricalDataMassive.js";
 import getHistoricalDataYahoo from "./historicalData/getHistoricalDataYahoo.js";
+import { removeExpiredImages } from "./removeExpiredImages.js";
+// import { insertCiks } from "./cikFunctions.js";
+// import { officerTitles } from './officerTitleExclusion.js';
 // import "./imageHandling/twitter/authOnce.js" // un-comment to reauth app
 
 const db = new DB();
 
-
-async function initBatchOrchestrator(batchSize = 5) {
+/**
+ * Initial chunking of pulls from sec.gov - Default pull of 5 CIKs at a time — each pull can have 
+ * several row writes when split up
+ * @param {number} batchSize number of CIKs to pull per iteration
+ * @returns {Promise<number>} Total number of records added
+ */
+async function initBatchOrchestrator(batchSize: number = 5): Promise<number> {
   const cikArray = sp500_cik;
   let totalRecordsAdded = 0;
 
@@ -54,20 +61,6 @@ async function getInitialData(currBatch: string[]) {
   return numRecordsAdded;
 }
 
-// Reset for failed jobs
-// async function reset() {
-//   await db.setData(`
-//   UPDATE form4_jobs
-//   SET status = 'pending'
-//   WHERE status = 'running'`, []);
-// }
-
-// async function runFailedJobs() {
-//   await reset();
-//   const processor = new XmlJobProcessor(db);
-//   processor.startProcessing();
-// }
-
 /**
  * Run Orchestrator is the main organizer for all actions,
  * running all actions in a stepwise fashion.
@@ -95,7 +88,7 @@ async function runOrchestrator() {
   await processor.startProcessing();
 
   // Get current moving averages
-  // // If yahoo is not working, then we resort to the much slower MASSIVE feed
+  // If yahoo is not working, then we resort to the much slower MASSIVE feed
   try {
     await getHistoricalDataYahoo(db);
   } catch (err) {
@@ -130,6 +123,9 @@ async function runOrchestrator() {
   await postImages(db);
   console.info('-- Posts complete');
 
+  // Clean up expired images
+  await removeExpiredImages(db);
+
   console.log('SHUTTING DOWN');
   await db.shutdown();
   console.log('REMOVING WORKER VIA TERMINATE');
@@ -153,9 +149,6 @@ function debugClose() {
 // ******************* 1
 // **** Initial run ****
 runOrchestrator();
-
-
-
 
 // ********** Populate officer_title exclusion table ********** //
 // ** Table is used to filter titles from inclusion with sales pull
