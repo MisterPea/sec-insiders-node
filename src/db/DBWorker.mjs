@@ -14,9 +14,21 @@ db.pragma( 'journal_mode = WAL' );
 db.pragma( 'synchronous = NORMAL' );
 db.pragma( 'busy_timeout = 3000' );
 
+function ensureColumn( tableName, columnName, definition ) {
+  const columns = db.prepare( `PRAGMA table_info(${tableName})` ).all();
+  const hasColumn = columns.some( ( column ) => column.name === columnName );
+  if ( !hasColumn ) {
+    db.exec( `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}` );
+  }
+}
+
 // Init schema
 const schema = fs.readFileSync( path.join( __dirname, '../../schemas/schema.sql' ), 'utf-8' );
 db.exec( schema );
+ensureColumn( 'cluster_post', 'ticker', 'TEXT' );
+ensureColumn( 'cluster_post', 'purchase_or_sale', 'TEXT' );
+ensureColumn( 'cluster_post', 'last_twitter_attempt', 'INTEGER' );
+ensureColumn( 'cluster_post', 'last_bluesky_attempt', 'INTEGER' );
 
 parentPort.on( 'message', async ( message ) => {
   const { id, type, sql, params } = message;
