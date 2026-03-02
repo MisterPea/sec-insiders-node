@@ -123,7 +123,7 @@ export async function uploadPngAndPostTwitter({ clusterId, text = "" }: { cluste
 
   const fin = await finalizeUpload(accessToken, mediaId);
 
-  // For images, processing_info usually isn’t present; if it is, you’d poll status.
+  // For images, processing_info usually isn’t present; if it is, poll status.
   const tweetId = await postTweetWithMedia(accessToken, text, mediaId);
   return { tweetId, mediaId, finalize: fin };
 }

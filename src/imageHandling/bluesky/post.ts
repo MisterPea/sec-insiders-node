@@ -6,7 +6,7 @@ import path from "node:path";
 const TOKEN_FILE = "secrets/.bluesky.tokens.json";
 
 type StoredSession = {
-  // shape is whatever agent.session returns in your @atproto/api version,
+  // shape is whatever agent.session returns in @atproto/api,
   // but it includes accessJwt/refreshJwt + did/handle.
   session: any;
 };
@@ -21,7 +21,7 @@ async function loadSession(): Promise<any | null> {
   }
 }
 
-// super small mutex for local process; if you need cross-process locking, say so.
+// super small mutex for local process.
 class Mutex {
   private p = Promise.resolve();
   async run<T>(fn: () => Promise<T>) {

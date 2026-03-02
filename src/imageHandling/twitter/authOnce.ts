@@ -69,7 +69,7 @@ function waitForAuthCode(redirectUri: string, expectedState: string): Promise<st
     throw new Error("Missing TWITTER_CLIENT_ID / TWITTER_CLIENT_SECRET / TWITTER_API_REDIRECT_URI");
   }
 
-  // IMPORTANT: include tweet.write if you want to post/reply
+  // IMPORTANT: include tweet.write if we want to post/reply
   const oauth2Config: OAuth2Config = {
     clientId,
     clientSecret,

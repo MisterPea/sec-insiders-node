@@ -48,7 +48,7 @@ export async function findClusterPurchases(db: any, clusterWindow: number = 7, c
           MIN(t.is_director) AS all_are_directors,
           MIN(t.is_officer) AS all_are_officers,
 
-          -- ✅ counts distinct owners whose *per-owner* title is NULL
+          -- counts distinct owners whose *per-owner* title is NULL
         COUNT(DISTINCT CASE
           WHEN p.officer_title IS NULL THEN p.owner_name
           END) AS num_null_titles,
@@ -63,7 +63,7 @@ export async function findClusterPurchases(db: any, clusterWindow: number = 7, c
         AND p.transaction_code = t.transaction_code
         AND p.owner_name = UPPER(t.owner_name)
 
-        -- ✅ re-apply the same filters here, otherwise your aggregation is wrong
+        -- re-apply the same filters here, otherwise aggregation is wrong
         WHERE t.transaction_date >= DATE('now', '-${clusterWindow} days')
           AND t.transaction_code = 'P'
           AND t.equity_swap_involved = 0

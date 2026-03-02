@@ -146,32 +146,24 @@ function debugClose() {
   process.exit();
 }
 
-// ******************* 1
-// **** Initial run ****
-runOrchestrator();
-
 // ********** Populate officer_title exclusion table ********** //
 // ** Table is used to filter titles from inclusion with sales pull
 // async function populateOfficerTitleExclusion() {
-//   await db.setData(`DELETE FROM excluded_officer_titles`, []);
-//   await db.insertData(`
-//     INSERT INTO excluded_officer_titles (title) 
-//     VALUES (?)
-//     ON CONFLICT(title) DO NOTHING;`,
-//     officerTitles.map((t) => [t])
-//   );
-// }
-
-// ** Find repeat, directional discretionary transactions
-// const repeatTransactions = await findRepeatTransactions(db, 21, 3);
-// console.log(repeatTransactions);
-
-// ** Run failed jobs
-// runFailedJobs();
-
-// ** Populate CIK table
-// insertCiks(db)
-
-
+  //   await db.setData(`DELETE FROM excluded_officer_titles`, []);
+  //   await db.insertData(`
+  //     INSERT INTO excluded_officer_titles (title) 
+  //     VALUES (?)
+  //     ON CONFLICT(title) DO NOTHING;`,
+  //     officerTitles.map((t) => [t])
+  //   );
+  // }
+  
+  // ** Populate CIK table
+  // insertCiks(db)
+  
+  // ******************* 1
+  // **** Initial run ****
+  runOrchestrator();
+  
 
 

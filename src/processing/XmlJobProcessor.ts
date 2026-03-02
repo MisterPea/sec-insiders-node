@@ -3,6 +3,10 @@ import formFourProcessor from "./formFourProcessor.js";
 import { getXmlData } from '../pipeline.js';
 import { Database, Form4Parsed } from '../types.js';
 
+type ProcessingResult =
+  | { success: true; inserted: number; }
+  | { success: false; error: string; };
+
 export class XmlJobProcessor {
   private isProcessing = false;
   private maxConcurrent = 3;
@@ -91,9 +95,9 @@ async function processNextXmlUrl(database: Database): Promise<boolean> {
       const status = processingResult.error === "Cannot convert undefined or null to object" ? "broken_link" : "failed";
       await database.setData(`
         UPDATE form4_jobs 
-        SET status=${status}, error_message=?, updated_at=CURRENT_TIMESTAMP 
+        SET status=?, error_message=?, updated_at=CURRENT_TIMESTAMP 
         WHERE accession = ?`,
-        [JSON.stringify(processingResult.error), accession]
+        [status, JSON.stringify(processingResult.error), accession]
       );
       console.error(`Failed to process job: ${accession}, error: ${processingResult.error}`);
       return true; // Continue processing other jobs despite this failure
@@ -109,7 +113,7 @@ async function processNextXmlUrl(database: Database): Promise<boolean> {
  * @param {Object} documentData takes in an object of url, accession, and cik
  * @returns 
  */
-async function handleProcessingOfXmlUrls(database: any, documentData: { url: string, accession: string, cik: string; }) {
+async function handleProcessingOfXmlUrls(database: any, documentData: { url: string, accession: string, cik: string; }): Promise<ProcessingResult> {
   const { url, accession, cik } = documentData;
 
   try {
@@ -137,8 +141,7 @@ async function handleProcessingOfXmlUrls(database: any, documentData: { url: str
   } catch (error) {
     console.error(`Error processing XML for accession ${accession}:`, error);
     return {
-      // Continue on accession processing errors
-      success: true,
+      success: false,
       error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string; }).message : String(error)
     };
   }
@@ -178,4 +181,3 @@ function flattenTree(obj: any, prefix = ''): Record<string, any> {
   }
   return result;
 }
-
