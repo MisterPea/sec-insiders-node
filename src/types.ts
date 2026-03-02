@@ -171,7 +171,7 @@ export type RawSalesOutput = {
   all_are_officers: number,
   mixed_officer_dir: number,
   owners: string;
-  titles: string;
+  titles: string | null;
   ma200: number,
   off_ma200: number; // negative number
 };
@@ -194,7 +194,7 @@ export type RawPurchaseOutput = {
   all_are_directors: number,
   all_are_officers: number,
   owners: string,
-  titles: string,
+  titles: string | null,
   off_ma20: number,
   off_ma200: number,
 };

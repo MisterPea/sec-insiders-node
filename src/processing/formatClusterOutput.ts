@@ -53,6 +53,16 @@ const compactFormat = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2
 });
 
+function normalizeTitles(titles: string | null | undefined): string[] {
+  if (!titles) return [];
+  return [...new Set(
+    titles
+      .split('**')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )];
+}
+
 /**
  * Converter of raw sales data into info that can be converted to html
  * @param {Array<RawSalesOutput>} sales Array of sales data
@@ -97,7 +107,8 @@ export function formatSalesOutput(sales: RawSalesOutput[]): FormatOutput[] {
 
     const context = `The weighted average sale price was ${sharePriceFormat}/share - ${movingAvgPctAbove()} the 200-day MA.`;
 
-    const titlesFormat = [...new Set(titles.split('**').map(item => item.trim()))].join(' / ');
+    const titlesArray = normalizeTitles(titles);
+    const titlesFormat = titlesArray.length ? titlesArray.join(' / ') : 'UNNAMED INSIDERS';
 
     const aggregatedOutput: HtmlStringData = {
       companyName: company_name,
@@ -181,9 +192,9 @@ export function formatPurchaseOutput(purchases: RawPurchaseOutput[]): FormatOutp
 
     const priceAverage = `The weighted average purchase price was ${sharePriceFormat}/share - ${m20} and ${m200}`;
 
-    const titlesArray = [...new Set(titles.split('**').map(item => item.trim()))];
+    const titlesArray = normalizeTitles(titles);
     const nullAdditions = num_null_titles > 0 ? `${num_null_titles} UNNAMED INSIDERS` : '';
-    const titlesFormat = [...titlesArray, nullAdditions].join(' / ');
+    const titlesFormat = [...titlesArray, nullAdditions].filter(Boolean).join(' / ') || 'UNNAMED INSIDERS';
 
     const aggregatedOutput: HtmlStringData = {
       companyName: company_name,
@@ -442,5 +453,4 @@ function createHtmlString(documentInfo: HtmlStringData, isPurchase: boolean = fa
 
   return htmlFrame;
 }
-
 

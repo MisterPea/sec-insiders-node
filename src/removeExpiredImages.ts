@@ -17,14 +17,14 @@ export async function removeExpiredImages(db: any) {
     try {
       await rm(twitterPath);
       console.info(`Deleted Twitter image:${cluster_id}`);
-    } catch (err) {
+    } catch {
       console.warn('Error deleting image:', twitterPath);
     }
 
     try {
       await rm(blueskyPath);
       console.info(`Deleted Bluesky image:${cluster_id}`);
-    } catch (err) {
+    } catch {
       console.warn('Error deleting image:', blueskyPath);
     }
 
