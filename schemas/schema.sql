@@ -79,25 +79,12 @@ CREATE TABLE
     html_bluesky TEXT,
     generated_at TEXT,
     expiration_date TEXT,
-    accession_urls TEXT
+    accession_urls TEXT,
+    ticker TEXT,
+    purchase_or_sale TEXT,
+    last_twitter_attempt INTEGER,
+    last_bluesky_attempt INTEGER
   );
 
 CREATE TABLE
   IF NOT EXISTS excluded_officer_titles (title TEXT PRIMARY KEY);
-
-
--- DELETE from cluster_post WHERE cluster_id='6e1d1a49567542dc574f8f46aa7d39db60ee7a52a0fa92190a95a307fe77d908'
--- UPDATE cluster_post
--- SET was_posted_twitter='image_created'
--- WHERE cluster_id='6b47f128527f4bad7b0a830cb2ce72ac030b829d52224dbdb388bb397fbe6a30';
-
--- ALTER TABLE cluster_post
--- DROP COLUMN bluesky_attempt;
-
--- ALTER TABLE cluster_post
--- DROP COLUMN twitter_attempt;
-
--- DROP TABLE cluster_post;
--- UPDATE cluster_post
--- SET purchase_or_sale = 'P'
--- WHERE purchase_or_sale = 'purchase'
