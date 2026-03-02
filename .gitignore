@@ -1,14 +1,14 @@
 node_modules
 .DS_Store
 sqlite
+.vscode
 
-sqlite/sec_data.db
 .env
 src/htmlLayouts/index.html
 
 images
 dist
-
+secrets
 .twitter.tokens.json
 .bluesky.tokens.json
 launchd.err.log
