@@ -7,6 +7,9 @@ type ProcessingResult =
   | { success: true; inserted: number; }
   | { success: false; error: string; };
 
+type ProcessXmlFn = (database: Database, documentData: { url: string, accession: string, cik: string; }) => Promise<ProcessingResult>;
+type FetchXmlFn = (url: string) => Promise<any>;
+
 export class XmlJobProcessor {
   private isProcessing = false;
   private maxConcurrent = 3;
@@ -60,7 +63,7 @@ export class XmlJobProcessor {
   }
 }
 
-async function processNextXmlUrl(database: Database): Promise<boolean> {
+export async function processNextXmlUrl(database: Database, processXml: ProcessXmlFn = handleProcessingOfXmlUrls): Promise<boolean> {
   try {
     // Atomic operation-we're updating as we're setting
     //
@@ -83,7 +86,7 @@ async function processNextXmlUrl(database: Database): Promise<boolean> {
 
     const { accession } = result;
     console.log(`Processing job: ${accession}`);
-    const processingResult = await handleProcessingOfXmlUrls(database, result);
+    const processingResult = await processXml(database, result);
 
     if (processingResult.success) {
       await database.setData(`UPDATE form4_jobs SET status='ingested' WHERE accession = ?`, [accession]);
@@ -113,11 +116,15 @@ async function processNextXmlUrl(database: Database): Promise<boolean> {
  * @param {Object} documentData takes in an object of url, accession, and cik
  * @returns 
  */
-async function handleProcessingOfXmlUrls(database: any, documentData: { url: string, accession: string, cik: string; }): Promise<ProcessingResult> {
+export async function handleProcessingOfXmlUrls(
+  database: any,
+  documentData: { url: string, accession: string, cik: string; },
+  fetchXml: FetchXmlFn = getXmlData
+): Promise<ProcessingResult> {
   const { url, accession, cik } = documentData;
 
   try {
-    const xmlData = await getXmlData(url);
+    const xmlData = await fetchXml(url);
     const parser = new XMLParser({ ignoreDeclaration: true });
     const { ownershipDocument } = parser.parse(xmlData);
 

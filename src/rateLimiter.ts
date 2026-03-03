@@ -24,7 +24,10 @@ export class RateLimiter {
   }
 
   private sleep(ms: number) {
-    return new Promise<void>(res => setTimeout(res, ms));
+    return new Promise<void>((res) => {
+      const timeout = setTimeout(res, ms);
+      timeout.unref?.();
+    });
   }
 
   private async refillLoop() {

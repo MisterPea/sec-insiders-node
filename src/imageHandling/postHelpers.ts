@@ -1,5 +1,6 @@
 const MAX_CHARS = 280;
-let URL_COST = 23;      // each URL counts as 23 chars on X
+const TWITTER_URL_COST = 23;      // each URL counts as 23 chars on X
+const BLUESKY_URL_COST = 25;
 const SEP_COST = 1;       // newline between URLs
 
 type PackInput = {
@@ -22,7 +23,7 @@ type PackOutput = {
  * @returns {PackOutput}
  */
 export function packAccessionUrls({ header, urls, isBluesky = false }: PackInput): PackOutput {
-  if(isBluesky) URL_COST = 25;
+  const urlCost = isBluesky ? BLUESKY_URL_COST : TWITTER_URL_COST;
   // base text with optional header
   const headerText = header.trim();
   const headerLen = headerText ? headerText.length + 1 /* newline */ : 0;
@@ -36,7 +37,7 @@ export function packAccessionUrls({ header, urls, isBluesky = false }: PackInput
 
 
   for (let u of urls) {
-    const cost = (included.length ? SEP_COST : 0) + URL_COST;
+    const cost = (included.length ? SEP_COST : 0) + urlCost;
     if (remaining - cost >= 0) {
       mainLinks.push(u);
       if (isBluesky) u = BLUESKY_LINK;
@@ -61,11 +62,11 @@ export function chunkUrlsForReplies(urls: string[]): string[] {
   let curCost = 0;
 
   for (const u of urls) {
-    const addCost = (cur.length ? SEP_COST : 0) + URL_COST;
+    const addCost = (cur.length ? SEP_COST : 0) + TWITTER_URL_COST;
     if (curCost + addCost > MAX_CHARS) {
       chunks.push(cur.join("\n"));
       cur = [u];
-      curCost = URL_COST;
+      curCost = TWITTER_URL_COST;
     } else {
       cur.push(u);
       curCost += addCost;
