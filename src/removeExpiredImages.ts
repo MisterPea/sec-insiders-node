@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function removeExpiredImages(db: any) {
-  const dir = path.resolve(__dirname, '../images');
+export async function removeExpiredImages(db: any, imageDir: string = path.resolve(__dirname, '../images')) {
+  const dir = imageDir;
   const query = `
     SELECT cluster_id FROM cluster_post
     WHERE DATE(expiration_date) < DATE('now');
