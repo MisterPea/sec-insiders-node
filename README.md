@@ -5,8 +5,6 @@ SEC Insiders parses Form 4 filings of S&P 500 companies to detect discretionary 
 
 Built with a focus on creating a system that provides succinct, dispassionate analysis of insider activity, while leveraging modular construction to allow future extensibility.
 
----
-
 ## What It Does
 1. __Ingests Form 4 filings__
    * Parses XML filings from the SEC
@@ -29,8 +27,13 @@ Built with a focus on creating a system that provides succinct, dispassionate an
 5. __Generates output__
      * Renders shareable images, which are automatically posted to Bluesky and X
 
-### Example Output
---
+## Example Output
+
+  <ul style="display: flex; gap: 40px;">
+  <img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:b7stebv6eklfloowzz6fvx35/bafkreicsuimupjyyay4uquylqstlxvgtsyrbztqx2pzbv63wt7km3ptjny@jpeg" style="flex:1; width: 48%;" />
+  <img src="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:b7stebv6eklfloowzz6fvx35/bafkreieoytdhpcsyomhx4dkw62g3ewqqyt3rgtgatdbtxgwstgprcgjimm@jpeg" style="flex:1; width: 48%" />
+  </ul>
+
 
 ## Architecture
 ```markdown
@@ -46,7 +49,7 @@ Metric Enrichment (Price relation to 20/200 MA)
      ↓
 Renderer HTML → Puppeteer / Publisher
 ```
----
+
 ## Signal Philosophy - The goal is quality, not volume.
 
 To limit noise, we first exclude officers that are typically not affiliated with daily business. Such as titles that contain: `retired`, `former`, `emeritus`, `interim`, `advisor`, etc.
@@ -71,8 +74,6 @@ __A Sale Cluster Qualifies if:__
 6. Was *not* a predetermined sale under a 10b5-1 plan
 7. The weighted average purchase price is greater than the 200 MA
 
----
-
 ## Tech Stack
 
 - Node.js (ESM)
@@ -82,7 +83,6 @@ __A Sale Cluster Qualifies if:__
 - Docker (deployment)
 - LaunchAgent (timed runs)
 
---- 
 ## Disclaimer
 
 This tool surfaces public SEC filings and applies filtering logic.
