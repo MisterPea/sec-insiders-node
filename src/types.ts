@@ -173,6 +173,7 @@ export type RawSalesOutput = {
   owners: string;
   titles: string | null;
   ma200: number,
+  dailyPrice: number,
   off_ma200: number; // negative number
 };
 
@@ -195,6 +196,7 @@ export type RawPurchaseOutput = {
   all_are_officers: number,
   owners: string,
   titles: string | null,
+  dailyPrice: number,
   off_ma20: number,
   off_ma200: number,
 };
@@ -220,6 +222,7 @@ export type FormatOutput = {
   clusterId: string;
   ticker: string;
   purchaseOrSale: string;
+  cik: string;
 };
 
 export type ClusterInput = {
@@ -242,3 +245,11 @@ export type ClusterRecord = {
   expiration_date: string;
   accession_urls: string;
 };
+
+export interface ClusterTracking {
+  clusterId: string;
+  tickers: string;
+  cik: string;
+  purchaseOrSale: 'P' | 'S';
+  dailyPrice: number;
+}

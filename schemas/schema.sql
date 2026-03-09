@@ -60,12 +60,14 @@ CREATE TABLE
 CREATE TABLE
   IF NOT EXISTS moving_averages (
     ticker TEXT UNIQUE PRIMARY KEY,
+    cik TEXT,
     long_name TEXT,
     short_name TEXT,
     ma20 REAL DEFAULT 0.0,
     ma200 REAL DEFAULT 0.0,
     fifty_two_week_high REAL DEFAULT 0.0,
     fifty_two_week_low REAL DEFAULT 0.0,
+    daily_price REAL DEFAULT 0.0,
     volume INTEGER DEFAULT 0,
     date_string TEXT
   );
@@ -73,6 +75,7 @@ CREATE TABLE
 CREATE TABLE
   IF NOT EXISTS cluster_post (
     cluster_id TEXT PRIMARY KEY,
+    cik TEXT,
     was_posted_twitter TEXT DEFAULT 'pending',
     was_posted_bluesky TEXT DEFAULT 'pending',
     html_twitter TEXT,
@@ -82,8 +85,23 @@ CREATE TABLE
     accession_urls TEXT,
     ticker TEXT,
     purchase_or_sale TEXT,
+    is_tracked TEXT DEFAULT 'pending',
     last_twitter_attempt INTEGER,
     last_bluesky_attempt INTEGER
+  );
+
+CREATE TABLE
+  IF NOT EXISTS cluster_tracking (
+    cluster_id TEXT PRIMARY KEY,
+    tickers TEXT,
+    cik TEXT,
+    low_price REAL,
+    low_price_date TEXT,
+    high_price REAL,
+    high_price_date DATE,
+    initial_price REAL,
+    initial_date TEXT,
+    purchase_or_sale TEXT
   );
 
 CREATE TABLE

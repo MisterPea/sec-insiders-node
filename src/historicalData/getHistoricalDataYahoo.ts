@@ -33,10 +33,9 @@ export default async function getHistoricalDataYahoo(db: any) {
   const yf = new YahooFinance();
 
   // Get list of tickers
-  const tickerObj: { tickers: string; }[] = await db.getAllData(`
-    SELECT tickers FROM issuers
+  const tickerObj: { tickers: string, cik: string; }[] = await db.getAllData(`
+    SELECT tickers, cik FROM issuers
     `);
-  const tickers: string[] = tickerObj.map(({ tickers }) => tickers);
 
   // Get dates today and in past
   const now = new Date();
@@ -45,8 +44,8 @@ export default async function getHistoricalDataYahoo(db: any) {
   now.setDate(now.getDate() - 320);
   const startDate = createDateString(now);
 
-  for (const ticker of tickers) {
-    const simpleTicker = ticker.split(', ')[0];
+  for (const { tickers, cik } of tickerObj) {
+    const simpleTicker = tickers.split(', ')[0];
     if (!simpleTicker.length) continue;
 
     console.info(`Processing: ${simpleTicker}`);
@@ -63,15 +62,17 @@ export default async function getHistoricalDataYahoo(db: any) {
     const quotesLast20 = quotes.slice(-20);
     const ma20 = (quotesLast20.reduce((acc: number, curr: any) => acc + (curr?.adjclose ?? 0), 0) / 20).toFixed(2);
 
+    const currentPrice = (quotes.slice(-1)[0].adjclose ?? 0).toFixed(2);
+
     const query = `
     INSERT OR REPLACE INTO moving_averages 
-    (ticker, long_name, short_name, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    (ticker, long_name, short_name, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string, daily_price, cik)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     await _sleep(500);
 
     try {
-      await db.setData(query, [ticker, longName, shortName, ma20, ma200, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketVolume, endDate]);
+      await db.setData(query, [tickers, longName, shortName, ma20, ma200, fiftyTwoWeekHigh, fiftyTwoWeekLow, regularMarketVolume, endDate, currentPrice, cik]);
     } catch (err) {
       console.error(`Error adding ticker:${simpleTicker} to database - Error${err}`);
     }

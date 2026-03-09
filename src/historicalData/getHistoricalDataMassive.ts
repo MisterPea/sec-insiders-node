@@ -81,15 +81,17 @@ export async function getHistoricalDataMassive(database: any) {
       const quotesLast20 = aggregates.slice(-20);
       const ma20 = (quotesLast20.reduce((acc: number, curr: Agg) => acc + (curr?.c ?? 0), 0) / 20).toFixed(2);
 
+      const currentPrice = (aggregates.slice(-1)[0]?.c ?? 0).toFixed(2);
+
       const avgVolume = (aggregates.reduce((acc: number, curr: Agg) => acc + (curr?.v ?? 0), 0) / aggregates.length).toFixed(0);
 
       const query = `
         INSERT OR REPLACE INTO moving_averages 
-        (ticker, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        (ticker, ma20, ma200, fifty_two_week_high, fifty_two_week_low, volume, date_string, daily_price)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
       console.info(`Add MA for ${ticker}`);
-      await database.setData(query, [ticker, ma20, ma200, high, low, avgVolume, startDate]);
+      await database.setData(query, [ticker, ma20, ma200, high, low, avgVolume, startDate, currentPrice]);
 
 
     } catch (err) {
