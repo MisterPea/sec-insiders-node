@@ -96,10 +96,10 @@ async function runOrchestrator() {
 
     // Add cluster html string to the db
     await db.insertData(`
-    INSERT INTO cluster_post (cluster_id, html_twitter, html_bluesky, accession_urls, generated_at, expiration_date, ticker, purchase_or_sale)
-    VALUES (?, ?, ?, ?, DATETIME('now'), DATETIME('now', '+' || ? || ' days'), ?, ?)
+    INSERT INTO cluster_post (cluster_id, cik, html_twitter, html_bluesky, accession_urls, generated_at, expiration_date, ticker, purchase_or_sale)
+    VALUES (?, ?, ?, ?, ?, DATETIME('now'), DATETIME('now', '+' || ? || ' days'), ?, ?)
     ON CONFLICT(cluster_id) DO NOTHING 
-    `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions, ticker, purchaseOrSale }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow, ticker, purchaseOrSale]));
+    `, clusterOutputs.map(({ clusterId, cik, twitterHtml, blueskyHtml, accessions, ticker, purchaseOrSale }) => [clusterId, cik, twitterHtml, blueskyHtml, accessions, daysWindow, ticker, purchaseOrSale]));
 
     // Add to cluster_tracking table (we're adding here b/c we're using cluster_post table as locus of truth)
     await addClustersToTracker(db);

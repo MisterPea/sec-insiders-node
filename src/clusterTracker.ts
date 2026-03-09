@@ -16,10 +16,22 @@ export async function updateCusterTracker(db: any) {
   for (const record of currentRecords) {
     const { cluster_id, cik, low_price, high_price, low_price_date, high_price_date } = record;
 
-    const { daily_price } = await db.getData(`
+    if (!cik) {
+      console.warn(`Skipping cluster_tracking update for ${cluster_id}: missing cik`);
+      continue;
+    }
+
+    const priceRow = await db.getData(`
       SELECT daily_price FROM moving_averages
       WHERE cik = ?
     `, [cik]);
+
+    if (!priceRow || priceRow.daily_price == null) {
+      console.warn(`Skipping cluster_tracking update for ${cluster_id}: no daily_price for cik ${cik}`);
+      continue;
+    }
+
+    const { daily_price } = priceRow;
 
     let newLow = low_price;
     let newHigh = high_price;
@@ -126,4 +138,3 @@ export async function addClustersToTracker(db: any) {
     }
   }
 }
-
