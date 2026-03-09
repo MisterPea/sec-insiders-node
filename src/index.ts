@@ -10,6 +10,7 @@ import { postImages } from "./imageHandling/postImages.js";
 import { getHistoricalDataMassive } from "./historicalData/getHistoricalDataMassive.js";
 import getHistoricalDataYahoo from "./historicalData/getHistoricalDataYahoo.js";
 import { removeExpiredImages } from "./removeExpiredImages.js";
+import { addClustersToTracker, updateCusterTracker } from "./clusterTracker.js";
 // import { insertCiks } from "./cikFunctions.js";
 // import { officerTitles } from './officerTitleExclusion.js';
 // import "./imageHandling/twitter/authOnce.js" // un-comment to reauth app
@@ -70,62 +71,56 @@ async function runOrchestrator() {
   const totalRecordsAdded = await initBatchOrchestrator(30);
   console.info('Initial ingest complete');
 
-  // No records added means no additional processing needed.
-  if (totalRecordsAdded === 0) {
-    console.log('No new records found');
+  // Get current prices no matter what
+  await getCurrentPrices();
 
-    console.log('SHUTTING DOWN');
-    await db.shutdown();
-    console.log('REMOVING WORKER VIA TERMINATE');
-    await db.worker.terminate();
-    console.log('SHUTDOWN-WORKER REMOVED');
-    debugClose();
-    return;
-  }
+  // Always run update on cluster tracker after we update current prices (even if no records are added)
+  await updateCusterTracker(db);
 
-  // Process individual accessions/jobs
-  const processor = new XmlJobProcessor(db);
-  await processor.startProcessing();
+  // If we added any records we run the process and cluster check
+  if (totalRecordsAdded > 0) {
+    // Process individual accessions/jobs
+    const processor = new XmlJobProcessor(db);
+    await processor.startProcessing();
 
-  // Get current moving averages
-  // If yahoo is not working, then we resort to the much slower MASSIVE feed
-  try {
-    await getHistoricalDataYahoo(db);
-  } catch (err) {
-    console.info('ERROR:', err, '--trying fallback');
-    await getHistoricalDataMassive(db);
-  }
+    // Find cluster purchase/sales 
+    const daysWindow = 45;
+    const saleClusters = await findClusterSales(db, daysWindow, 3);
+    const outputSalesArray = formatSalesOutput(saleClusters);
 
-  // ******************** render html ******************** //
-  // Find cluster purchase/sales 
-  const daysWindow = 45;
-  const saleClusters = await findClusterSales(db, daysWindow, 3);
-  const outputSalesArray = formatSalesOutput(saleClusters);
+    const purchaseClusters = await findClusterPurchases(db, daysWindow, 3);
+    const outputPurchaseArray = formatPurchaseOutput(purchaseClusters);
 
-  const purchaseClusters = await findClusterPurchases(db, daysWindow, 3);
-  const outputPurchaseArray = formatPurchaseOutput(purchaseClusters);
+    // Collect purchases and sales into one array - pass it to insert
+    const clusterOutputs: FormatOutput[] = [...outputSalesArray, ...outputPurchaseArray];
 
-  // Collect purchases and sales into one array - pass it to insert
-  const clusterOutputs: FormatOutput[] = [...outputSalesArray, ...outputPurchaseArray];
-
-  // Add cluster html string to the db
-  await db.insertData(`
+    // Add cluster html string to the db
+    await db.insertData(`
     INSERT INTO cluster_post (cluster_id, html_twitter, html_bluesky, accession_urls, generated_at, expiration_date, ticker, purchase_or_sale)
     VALUES (?, ?, ?, ?, DATETIME('now'), DATETIME('now', '+' || ? || ' days'), ?, ?)
     ON CONFLICT(cluster_id) DO NOTHING 
     `, clusterOutputs.map(({ clusterId, twitterHtml, blueskyHtml, accessions, ticker, purchaseOrSale }) => [clusterId, twitterHtml, blueskyHtml, accessions, daysWindow, ticker, purchaseOrSale]));
 
-  // Create images for each clusterId that doesn't have am image crated
-  console.info('-- Creating Images');
-  await createImages(db);
+    // Add to cluster_tracking table (we're adding here b/c we're using cluster_post table as locus of truth)
+    await addClustersToTracker(db);
 
-  console.info('-- Starting posts');
-  await postImages(db);
-  console.info('-- Posts complete');
+    // Create images for each clusterId that doesn't have am image crated
+    console.info('-- Creating Images');
+    await createImages(db);
 
-  // Clean up expired images
-  await removeExpiredImages(db);
+    console.info('-- Starting posts');
+    await postImages(db);
+    console.info('-- Posts complete');
 
+    // Clean up expired images
+    await removeExpiredImages(db);
+  }
+
+  await shutdownSecInsiders();
+  return;
+}
+
+async function shutdownSecInsiders() {
   console.log('SHUTTING DOWN');
   await db.shutdown();
   console.log('REMOVING WORKER VIA TERMINATE');
@@ -146,24 +141,32 @@ function debugClose() {
   process.exit();
 }
 
+async function getCurrentPrices() {
+  // Get current moving averages
+  // If yahoo is not working, then we resort to the much slower MASSIVE feed
+  try {
+    await getHistoricalDataYahoo(db);
+  } catch (err) {
+    console.info('ERROR:', err, '--trying fallback');
+    await getHistoricalDataMassive(db);
+  }
+}
+
 // ********** Populate officer_title exclusion table ********** //
 // ** Table is used to filter titles from inclusion with sales pull
 // async function populateOfficerTitleExclusion() {
-  //   await db.setData(`DELETE FROM excluded_officer_titles`, []);
-  //   await db.insertData(`
-  //     INSERT INTO excluded_officer_titles (title) 
-  //     VALUES (?)
-  //     ON CONFLICT(title) DO NOTHING;`,
-  //     officerTitles.map((t) => [t])
-  //   );
-  // }
-  
-  // ** Populate CIK table
-  // insertCiks(db)
-  
-  // ******************* 1
-  // **** Initial run ****
-  runOrchestrator();
-  
+//   await db.setData(`DELETE FROM excluded_officer_titles`, []);
+//   await db.insertData(`
+//     INSERT INTO excluded_officer_titles (title) 
+//     VALUES (?)
+//     ON CONFLICT(title) DO NOTHING;`,
+//     officerTitles.map((t) => [t])
+//   );
+// }
 
+// ** Populate CIK table
+// insertCiks(db)
 
+// ******************* 1
+// **** Initial run ****
+runOrchestrator();

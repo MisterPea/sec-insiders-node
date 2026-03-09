@@ -76,23 +76,24 @@ export async function findClusterPurchases(db: any, clusterWindow: number = 7, c
       )
       SELECT
         aggregated_data.*,
-
+        ma.daily_price,
         CASE
-          WHEN ma20 IS NULL OR ma20 = 0 THEN NULL
-          ELSE ((ma20 - weighted_avg_price) * 100.0 / ma20)
+          WHEN ma.ma20 IS NULL OR ma.ma20 = 0 THEN NULL
+          ELSE ((ma.ma20 - weighted_avg_price) * 100.0 / ma.ma20)
         END AS off_ma20,
 
         CASE
-          WHEN ma200 IS NULL OR ma200 = 0 THEN NULL
-          ELSE ((ma200 - weighted_avg_price) * 100.0 / ma200)
+          WHEN ma.ma200 IS NULL OR ma.ma200 = 0 THEN NULL
+          ELSE ((ma.ma200 - weighted_avg_price) * 100.0 / ma.ma200)
         END AS off_ma200
 
       FROM aggregated_data
-      JOIN moving_averages ma ON aggregated_data.tickers = ma.ticker
+      JOIN moving_averages ma 
+        ON aggregated_data.tickers = ma.ticker
 
       WHERE num_owners >= ${countThreshold}
-        AND weighted_avg_price < ma20
-        AND weighted_avg_price < ma200
+        AND weighted_avg_price < ma.ma20
+        AND weighted_avg_price < ma.ma200
 
     ORDER BY num_owners, total_value DESC;
   `;
@@ -166,6 +167,7 @@ export async function findClusterSales(db: any, clusterWindow: number = 7, count
       SELECT
         aggregated_data.*,
         ma.ma200,
+        ma.daily_price,
         CASE
           WHEN ma.ma200 IS NULL OR ma.ma200 = 0 THEN NULL
           ELSE ((ma.ma200 - weighted_avg_price) * 100.0 / ma.ma200)
