@@ -49,9 +49,9 @@ export async function updateCusterTracker(db: any) {
     try {
       await db.setData(`
         UPDATE cluster_tracking 
-        SET low_price = ?, high_price = ?, low_price_date = ?, high_price_date = ?
+        SET low_price = ?, high_price = ?, low_price_date = ?, high_price_date = ?, last_price = ?
         WHERE cluster_id = ?`,
-        [newLow, newHigh, newLowDate, newHighDate, cluster_id]
+        [newLow, newHigh, newLowDate, newHighDate, daily_price, cluster_id]
       );
       console.info(`Updated cluster_tracking for ${cluster_id} - ${cik}`)
 
@@ -111,13 +111,14 @@ export async function addClustersToTracker(db: any) {
       low_price,
       high_price,
       initial_price,
+      last_price,
       purchase_or_sale,
       low_price_date,
       high_price_date,
       initial_date
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, DATE('now'), DATE('now'), DATE('now'))`,
-        [[cluster_id, ticker, cik, daily_price, daily_price, daily_price, purchase_or_sale]]
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE('now'), DATE('now'), DATE('now'))`,
+        [[cluster_id, ticker, cik, daily_price, daily_price, daily_price, daily_price, purchase_or_sale]]
       );
 
       await db.setData(`
