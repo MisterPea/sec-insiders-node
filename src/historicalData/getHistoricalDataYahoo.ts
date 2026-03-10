@@ -14,8 +14,9 @@ async function getTickerData(yFin: any, simpleTicker: string, startDate: string,
 
   } catch (err) {
     if (retriesAvailable > 0) {
+      console.info(`Retrying getTickerData:${simpleTicker}`);
       await _sleep(sleepMs);
-      getTickerData(yFin, simpleTicker, startDate, endDate, retriesAvailable - 1, sleepMs * 1.5);
+      return await getTickerData(yFin, simpleTicker, startDate, endDate, retriesAvailable - 1, sleepMs * 1.5);
     } else {
       // though this grenades the entire function—after 4 retries, something is wrong
       console.error("YAHOO-ERROR:", err);

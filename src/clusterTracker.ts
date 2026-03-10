@@ -9,12 +9,12 @@ const isoDate = () => {
 
 export async function updateCusterTracker(db: any) {
   const currentRecords = await db.getAllData(`
-    SELECT cluster_id, cik, low_price, high_price, low_price_date, high_price_date
+    SELECT cluster_id, cik, low_price, high_price, low_price_date, high_price_date, initial_price
     FROM cluster_tracking`
   );
 
   for (const record of currentRecords) {
-    const { cluster_id, cik, low_price, high_price, low_price_date, high_price_date } = record;
+    const { cluster_id, cik, low_price, high_price, low_price_date, high_price_date, initial_price } = record;
 
     if (!cik) {
       console.warn(`Skipping cluster_tracking update for ${cluster_id}: missing cik`);
@@ -33,6 +33,8 @@ export async function updateCusterTracker(db: any) {
 
     const { daily_price } = priceRow;
 
+    const pctDiff = (1 - (initial_price / daily_price)) * 100;
+
     let newLow = low_price;
     let newHigh = high_price;
     let newLowDate = low_price_date;
@@ -49,11 +51,11 @@ export async function updateCusterTracker(db: any) {
     try {
       await db.setData(`
         UPDATE cluster_tracking 
-        SET low_price = ?, high_price = ?, low_price_date = ?, high_price_date = ?, last_price = ?
+        SET low_price = ?, high_price = ?, low_price_date = ?, high_price_date = ?, last_price = ?, percent_diff = ?
         WHERE cluster_id = ?`,
-        [newLow, newHigh, newLowDate, newHighDate, daily_price, cluster_id]
+        [newLow, newHigh, newLowDate, newHighDate, daily_price, pctDiff, cluster_id]
       );
-      console.info(`Updated cluster_tracking for ${cluster_id} - ${cik}`)
+      console.info(`Updated cluster_tracking for ${cluster_id} - ${cik}`);
 
     } catch (err) {
       console.error(`Could not update tracking on ${cik}`);

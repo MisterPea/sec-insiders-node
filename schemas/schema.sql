@@ -100,6 +100,8 @@ CREATE TABLE
     high_price REAL,
     high_price_date DATE,
     initial_price REAL,
+    last_price REAL,
+    percent_diff REAL DEFAULT 0.0,
     initial_date TEXT,
     purchase_or_sale TEXT
   );

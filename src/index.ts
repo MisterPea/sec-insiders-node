@@ -170,3 +170,4 @@ async function getCurrentPrices() {
 // ******************* 1
 // **** Initial run ****
 runOrchestrator();
+

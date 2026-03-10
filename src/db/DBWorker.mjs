@@ -29,6 +29,7 @@ ensureColumn( 'cluster_post', 'ticker', 'TEXT' );
 ensureColumn( 'cluster_post', 'purchase_or_sale', 'TEXT' );
 ensureColumn( 'cluster_post', 'last_twitter_attempt', 'INTEGER' );
 ensureColumn( 'cluster_post', 'last_bluesky_attempt', 'INTEGER' );
+ensureColumn( 'cluster_tracking', 'last_price', 'REAL' );
 
 parentPort.on( 'message', async ( message ) => {
   const { id, type, sql, params } = message;
