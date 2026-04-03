@@ -11,7 +11,11 @@ dist
 secrets
 .twitter.tokens.json
 .bluesky.tokens.json
+portfolio-project-notes.txt
+
+# Cron (LaunchAgent) files
 launchd.err.log
 launchd.out.log
 launch_agents/com.mothership.secform4.plist
 launch_agents/scripts_to_add_agent.sh
+run-launchd-job.sh
