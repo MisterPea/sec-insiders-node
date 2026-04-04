@@ -1,7 +1,7 @@
-# SEC Insiders 📈
+# SEC Insider Trade Clusters 📈
 ### Automated SEC Form 4 cluster detection, scoring, and publishing pipeline.
 
-SEC Insiders parses Form 4 filings of S&P 500 companies to detect discretionary buy/sell clusters. In addition to these findings, we compute contextual market metrics and automatically generate shareable market commentary.
+*SEC Insider Trade Clusters* parses Form 4 filings of S&P 500 companies to detect discretionary buy/sell clusters. In addition to these findings, we compute contextual market metrics (20–200 MA) and automatically generate shareable market commentary.
 
 Built with a focus on creating a system that provides succinct, dispassionate analysis of insider activity, while leveraging modular construction to allow future extensibility.
 
