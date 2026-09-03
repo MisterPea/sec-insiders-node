@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Page } from 'puppeteer';
 import { ClusterRecord, Database } from '../types.js';
 import fs from 'fs';
 import path from 'path';
@@ -27,7 +27,7 @@ async function _claimNextClusterPost(db: Database): Promise<ClusterRecord | unde
 }
 
 
-async function _screenshotHtmlToFile(page: puppeteer.Page, htmlString: string, outputPath: string, aspectRatio: string = 'twitter') {
+async function _screenshotHtmlToFile(page: Page, htmlString: string, outputPath: string, aspectRatio: string = 'twitter') {
   const width = aspectRatio === 'twitter' ? 1500 : 1500; // twitter: 3/2 - bluesky: 4/3
   const height = aspectRatio === 'twitter' ? 1000 : 1125;
   const deviceScale = aspectRatio === 'twitter' ? 4 : 3;
@@ -40,7 +40,7 @@ async function _screenshotHtmlToFile(page: puppeteer.Page, htmlString: string, o
     deviceScaleFactor: deviceScale
   });
 
-  await page.setContent(htmlString, { waitUntil: "networkidle0" });
+  await page.setContent(htmlString, { waitUntil: "load" });
 
   // wait for webfonts to finish
   await page.evaluate(() => (document as any).fonts?.ready);
