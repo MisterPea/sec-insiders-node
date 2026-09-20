@@ -84,7 +84,7 @@ async function _postImageTwitter(database: any) {
 
   // Set tweet text
   const isPurchOrSale = purchase_or_sale === 'P' ? 'purchases' : 'sales';
-  const header = `Insider ${isPurchOrSale} for (${ticker})`;
+  const header = `Insider ${isPurchOrSale} for ($${ticker})`;
   const accessionArray = JSON.parse(accession_urls);
 
   // If we have too much, save for overflow for successive replies
@@ -140,7 +140,7 @@ export async function _postImageBluesky(database: Database) {
 
   // Set post text
   const isPurchOrSale = purchase_or_sale === 'P' ? 'purchases' : 'sales';
-  const headerText = `Insider ${isPurchOrSale} for (${ticker})`;
+  const headerText = `Insider ${isPurchOrSale} for ($${ticker})`;
   const accessionArray = JSON.parse(accession_urls);
 
   // If we have too much, save for overflow for successive replies
